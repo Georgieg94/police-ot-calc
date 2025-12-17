@@ -11,13 +11,9 @@
     label{font-weight:600;margin-top:12px;display:block}
     input,select,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem}
     button{background:#0a84ff;color:#fff;border:none;font-weight:700}
-    button.secondary{background:#e5e5ea;color:#000}
-    button.danger{background:#ff3b30}
     .row{display:flex;justify-content:space-between;margin:6px 0}
     .result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
     .entry{background:#fff;border-radius:12px;padding:10px;margin-top:8px}
-    .actions{display:flex;gap:8px;margin-top:6px}
-    img.thumb{width:60px;border-radius:10px;margin-top:6px}
   </style>
 </head>
 <body>
@@ -53,9 +49,6 @@
     <option value="2">Cancelled RD (Double)</option>
   </select>
 
-  <label>Attach Receipt</label>
-  <input type="file" id="receipt" accept="image/*" capture="environment">
-
   <div class="result">
     <div class="row"><span>Base hourly</span><strong>£<span id="base">0.00</span></strong></div>
     <div class="row"><span>OT hourly</span><strong>£<span id="ot">0.00</span></strong></div>
@@ -69,16 +62,19 @@
 
 <div class="card">
   <h2>Overtime Log</h2>
-
-  <label>View</label>
   <select id="viewMode">
     <option value="day">By Day</option>
     <option value="week">By Week</option>
     <option value="month">By Month</option>
     <option value="year">By Year</option>
   </select>
-
   <div id="log"></div>
+</div>
+
+<div class="card">
+  <h2>Totals</h2>
+  <div class="row"><span>This Month</span><strong>£<span id="monthTotal">0.00</span></strong></div>
+  <div class="row"><span>This Year</span><strong>£<span id="yearTotal">0.00</span></strong></div>
 </div>
 
 <div class="card">
@@ -89,29 +85,43 @@
 <script>
 const WEEKLY_HOURS = 40;
 const STORE_KEY = 'police_ot_entries';
-let editIndex = null;
 
 const PAY = {
   met:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}},
   other:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}}
 };
 
-const force = force;
-const rank = rank;
-const point = point;
-const hours = hours;
-const otType = otType;
-const receipt = document.getElementById('receipt');
+const force = document.getElementById('force');
+const rank = document.getElementById('rank');
+const point = document.getElementById('point');
+const hours = document.getElementById('hours');
+const otType = document.getElementById('otType');
+const dateEl = document.getElementById('date');
+const viewMode = document.getElementById('viewMode');
 
-const baseEl = base;
-const otEl = ot;
-const grossEl = gross;
-const dedEl = ded;
-const netEl = net;
+const baseEl = document.getElementById('base');
+const otEl = document.getElementById('ot');
+const grossEl = document.getElementById('gross');
+const dedEl = document.getElementById('ded');
+const netEl = document.getElementById('net');
+const log = document.getElementById('log');
+const monthTotalEl = document.getElementById('monthTotal');
+const yearTotalEl = document.getElementById('yearTotal');
 
-function loadRanks(){rank.innerHTML='';Object.keys(PAY[force.value]).forEach(r=>rank.add(new Option(r,r)));loadPoints();}
-function loadPoints(){point.innerHTML='';Object.keys(PAY[force.value][rank.value]).forEach(p=>point.add(new Option(p,p)));calculate();}
+/* ===== PAY LOADERS ===== */
+function loadRanks(){
+  rank.innerHTML='';
+  Object.keys(PAY[force.value]).forEach(r=>rank.add(new Option(r,r)));
+  loadPoints();
+}
 
+function loadPoints(){
+  point.innerHTML='';
+  Object.keys(PAY[force.value][rank.value]).forEach(p=>point.add(new Option(p,p)));
+  calculate();
+}
+
+/* ===== CALCULATION ===== */
 function calculate(){
   const annual = PAY[force.value][rank.value][point.value];
   if(!annual) return null;
@@ -127,127 +137,123 @@ function calculate(){
   grossEl.textContent = gross.toFixed(2);
   dedEl.textContent = taxNI.toFixed(2);
   netEl.textContent = net.toFixed(2);
-  return net;
+  return {net, gross, hrs};
 }
 
+/* ===== STORAGE ===== */
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
-function saveEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
+function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-function fileToBase64(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(file);});}
+/* ===== RECEIPTS ===== */
+const receiptInput = document.createElement('input');
+receiptInput.type='file';
+receiptInput.accept='image/*';
+receiptInput.capture='environment';
 
+function fileToBase64(file){
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.readAsDataURL(file);
+  });
+}
+
+const receiptBtn = document.createElement('button');
+receiptBtn.textContent='Attach Receipt';
+receiptBtn.onclick=()=>receiptInput.click();
+
+/* ===== SAVE OT ===== */
 save.onclick = async()=>{
-  const net = calculate();
-  if(net===null) return;
-  let receiptData = null;
-  if(receipt.files[0]) receiptData = await fileToBase64(receipt.files[0]);
-  const entry = {date:date.value,hours:Number(hours.value),net,receipt:receiptData};
+  const c = calculate();
+  if(!c) return;
+  let receipt=null;
+  if(receiptInput.files[0]) receipt = await fileToBase64(receiptInput.files[0]);
   const all = getEntries();
-  if(editIndex!==null){all[editIndex]=entry;editIndex=null;} else all.push(entry);
-  saveEntries(all);
-  receipt.value='';
+  all.push({date:dateEl.value,hours:c.hrs,gross:c.gross,net:c.net,receipt});
+  setEntries(all);
+  receiptInput.value='';
   render();
 };
 
+/* ===== GROUPED LOG + TOTALS ===== */
+function groupKey(d){
+  if(viewMode.value==='day') return d.toLocaleDateString();
+  if(viewMode.value==='week'){
+    const start=new Date(d);start.setDate(d.getDate()-d.getDay());
+    return 'Week of '+start.toLocaleDateString();
+  }
+  if(viewMode.value==='month') return d.toLocaleString('default',{month:'long',year:'numeric'});
+  return d.getFullYear();
+}
+
 function render(){
-  const entries = getEntries();
-  log.innerHTML = '';
-
-  const now = new Date();
-  let monthTotal = 0;
-  let yearTotal = 0;
-
-  const groups = {};
-
-  entries.forEach(e => {
-    const d = new Date(e.date);
-    if(d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthTotal += e.net;
-    if(d.getFullYear() === now.getFullYear()) yearTotal += e.net;
-
-    let key;
-    switch(viewMode.value){
-      case 'week':
-        const first = new Date(d.getFullYear(),0,1);
-        key = d.getFullYear() + ' W' + Math.ceil((((d - first) / 86400000) + first.getDay() + 1) / 7);
-        break;
-      case 'month': key = d.toLocaleString('default',{month:'long',year:'numeric'}); break;
-      case 'year': key = d.getFullYear(); break;
-      default: key = e.date;
-    }
-
-    groups[key] = (groups[key] || 0) + e.net;
-  });
-
-  Object.keys(groups).forEach(k => {
-    log.innerHTML += `<div class='entry'><strong>${k}</strong><br>£${groups[k].toFixed(2)}</div>`;
-  });
-
-  monthTotalEl.textContent = monthTotal.toFixed(2);
-  yearTotalEl.textContent = yearTotal.toFixed(2);
-} • ${e.hours}h • £${e.net.toFixed(2)}${e.receipt?`<br><img class='thumb' src='${e.receipt}'>`:''}<div class='actions'><button class='secondary' onclick='editEntry(${i})'>Edit</button><button class='danger' onclick='deleteEntry(${i})'>Delete</button></div></div>`;
-  });
-}
-
-function editEntry(i){const e=getEntries()[i];editIndex=i;date.value=e.date;hours.value=e.hours;netEl.textContent=e.net;}
-function deleteEntry(i){if(!confirm('Delete entry?'))return;const all=getEntries();all.splice(i,1);saveEntries(all);render();}
-
-function exportPDF(){
-  const entries = getEntries();
-  if(!entries.length){ alert('No overtime to export'); return; }
-  const win = window.open('', '_blank');
-  win.document.write(`<h1>${force.options[force.selectedIndex].text}</h1><p>Warrant: ${warrant.value}</p><table border='1' width='100%'><tr><th>Date</th><th>Hours</th><th>Net</th></tr>`);
-  let total=0;
-  entries.forEach(e=>{total+=e.net;win.document.write(`<tr><td>${e.date}</td><td>${e.hours}</td><td>£${e.net.toFixed(2)}</td></tr>`);if(e.receipt)win.document.write(`<tr><td colspan='3'><img src='${e.receipt}' width='300'></td></tr>`);});
-  win.document.write(`<tr><th colspan='2'>Total</th><th>£${total.toFixed(2)}</th></tr></table>`);
-  win.print();
-}
-
-exportPdf.onclick = exportPDF;
-
-/* ===== DROP 7: CALENDAR EXPORT (ICS) ===== */
-function exportCalendar(){
-  const entries = getEntries();
-  if(!entries.length){ alert('No overtime to export'); return; }
-
-  let ics = 'BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Police OT//EN
-';
+  log.innerHTML='';
+  const entries=getEntries();
+  const grouped={};
+  const now=new Date();
+  let m=0,y=0;
 
   entries.forEach(e=>{
-    const d = new Date(e.date);
-    const dt = d.toISOString().replace(/[-:]/g,'').split('.')[0];
-    const summary = 'Police Overtime';
-    const desc = `Hours: ${e.hours}\nNet: £${e.net.toFixed(2)}`;
-
-    ics += 'BEGIN:VEVENT
-';
-    ics += `DTSTART:${dt}
-`;
-    ics += `DTEND:${dt}
-`;
-    ics += `SUMMARY:${summary}
-`;
-    ics += `DESCRIPTION:${desc}
-`;
-    ics += 'END:VEVENT
-';
+    const d=new Date(e.date);
+    const k=groupKey(d);
+    grouped[k]??={h:0,n:0,items:[]};
+    grouped[k].h+=e.hours;
+    grouped[k].n+=e.net;
+    grouped[k].items.push(e);
+    if(d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear())m+=e.net;
+    if(d.getFullYear()===now.getFullYear())y+=e.net;
   });
 
-  ics += 'END:VCALENDAR';
+  Object.keys(grouped).forEach(k=>{
+    log.innerHTML+=`<div class='entry'><strong>${k}</strong><br>${grouped[k].h}h • £${grouped[k].n.toFixed(2)}</div>`;
+    grouped[k].items.forEach(i=>{
+      log.innerHTML+=`<div class='entry'>${i.date} • ${i.hours}h • £${i.net.toFixed(2)}${i.receipt?`<br><img src='${i.receipt}' style='width:90px;border-radius:8px'>`:''}</div>`;
+    });
+  });
 
-  const blob = new Blob([ics], { type: 'text/calendar' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'police-overtime.ics';
+  monthTotalEl.textContent=m.toFixed(2);
+  yearTotalEl.textContent=y.toFixed(2);
+}
+
+/* ===== CALENDAR EXPORT ===== */
+function exportCalendar(){
+  const entries=getEntries();
+  if(!entries.length){alert('No overtime');return;}
+  let ics='BEGIN:VCALENDAR
+VERSION:2.0
+';
+  entries.forEach(e=>{
+    const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];
+    ics+=`BEGIN:VEVENT
+DTSTART:${d}
+SUMMARY:Police Overtime (${e.hours}h)
+DESCRIPTION:Net £${e.net.toFixed(2)}
+END:VEVENT
+`;
+  });
+  ics+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  a.download='police-overtime.ics';
   a.click();
 }
 
-const calBtn = document.createElement('button');
-calBtn.textContent = 'Add OT to Calendar';
-calBtn.onclick = exportCalendar;
-document.querySelector('.card:last-of-type').prepend(calBtn);
-force.onchange=loadRanks;rank.onchange=loadPoints;hours.oninput=calculate;otType.onchange=calculate;
-date.valueAsDate=new Date();loadRanks();render();
+const calBtn=document.createElement('button');
+calBtn.textContent='Export to Calendar';
+calBtn.onclick=exportCalendar;
+
+/* ===== INIT ===== */
+force.onchange=loadRanks;
+rank.onchange=loadPoints;
+hours.oninput=calculate;
+otType.onchange=calculate;
+viewMode.onchange=render;
+dateEl.valueAsDate=new Date();
+loadRanks();
+render();
+
+save.after(receiptBtn);
+receiptBtn.after(calBtn);
 </script>
 </body>
 </html>
