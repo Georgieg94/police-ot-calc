@@ -6,7 +6,7 @@
   <title>Police Overtime Calculator</title>
   <style>
     body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;margin:0;background:#f2f2f7}
-    .card{max-width:480px;margin:16px auto;background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+    .card{max-width:480px;margin:16px auto 80px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
     h1,h2{margin:8px 0;text-align:center}
     label{font-weight:600;margin-top:12px;display:block}
     input,select,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem}
@@ -17,6 +17,7 @@
     .result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
     .entry{background:#fff;border-radius:12px;padding:10px;margin-top:8px}
     .actions{display:flex;gap:8px;margin-top:6px}
+    img.thumb{width:70px;border-radius:10px;margin-top:6px}
     nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ddd;display:flex}
     nav button{flex:1;border-radius:0;background:#fff;color:#000;font-weight:600}
     nav button.active{color:#0a84ff}
@@ -55,6 +56,9 @@
     <option value="2">Cancelled RD (Double)</option>
   </select>
 
+  <label>Attach Receipt</label>
+  <input type="file" id="receipt" accept="image/*" capture="environment">
+
   <div class="result">
     <div class="row"><span>Base hourly</span><strong>£<span id="base">0.00</span></strong></div>
     <div class="row"><span>OT hourly</span><strong>£<span id="ot">0.00</span></strong></div>
@@ -63,11 +67,9 @@
     <div class="row"><span>Net</span><strong>£<span id="net">0.00</span></strong></div>
   </div>
 
-  <label>Receipt / Attachment</label>
-  <input type="file" id="attachment" accept="image/*" capture="environment">
-
   <button id="save">Save Overtime</button>
-  <button id="exportPdf" class="secondary">Export PDF Claim</button>
+  <button id="exportPdf" class="secondary">Export Claim PDF</button>
+  <button id="exportCal" class="secondary">Export to Calendar</button>
 </div>
 
 <div class="card" id="screen-log" style="display:none">
@@ -77,8 +79,7 @@
 
 <div class="card" id="screen-settings" style="display:none">
   <h2>Settings</h2>
-  <label>Clear all overtime data</label>
-  <button class="danger" id="clearData">Clear Data</button>
+  <button class="danger" id="clearData">Clear All Data</button>
 </div>
 
 <nav>
@@ -88,10 +89,6 @@
 </nav>
 
 <script>
-/* =====================
-   DROP 16 – PDF + CALENDAR
-===================== */
-
 const WEEKLY_HOURS = 40;
 const STORE_KEY = 'police_ot_entries';
 
@@ -100,21 +97,19 @@ const PAY = {
   other:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}}
 };
 
-const force = document.getElementById('force');
+const force = forceEl = document.getElementById('force');
 const rank = document.getElementById('rank');
 const point = document.getElementById('point');
 const hours = document.getElementById('hours');
 const otType = document.getElementById('otType');
 const dateEl = document.getElementById('date');
-const warrantEl = document.getElementById('warrant');
+const receiptEl = document.getElementById('receipt');
 
 const baseEl = document.getElementById('base');
 const otEl = document.getElementById('ot');
 const grossEl = document.getElementById('gross');
 const dedEl = document.getElementById('ded');
 const netEl = document.getElementById('net');
-
-let editIndex = null;
 
 function loadRanks(){
   rank.innerHTML='';
@@ -143,28 +138,31 @@ function calculate(){
   grossEl.textContent = gross.toFixed(2);
   dedEl.textContent = taxNI.toFixed(2);
   netEl.textContent = net.toFixed(2);
-  return {net, hrs, gross, taxNI};
+  return {net, hrs, gross};
 }
 
+function fileToBase64(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});}
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
 function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-save.onclick=()=>{
+save.onclick = async ()=>{
   const calc = calculate();
   if(!calc) return;
-  const all = getEntries();
+  const receipt = receiptEl.files[0] ? await fileToBase64(receiptEl.files[0]) : null;
   const entry = {
     date: dateEl.value,
+    hours: calc.hrs,
+    gross: calc.gross,
+    net: calc.net,
     force: force.value,
     rank: rank.value,
     point: point.value,
-    hours: calc.hrs,
-    gross: calc.gross,
-    taxNI: calc.taxNI,
-    net: calc.net
+    receipt
   };
-  if(editIndex!==null){all[editIndex]=entry;editIndex=null;} else all.push(entry);
+  const all = getEntries();
+  all.push(entry);
   setEntries(all);
+  receiptEl.value='';
   renderLog();
 };
 
@@ -172,91 +170,43 @@ function renderLog(){
   log.innerHTML='';
   getEntries().forEach((e,i)=>{
     log.innerHTML+=`<div class="entry">${e.date} • ${e.hours}h • £${e.net.toFixed(2)}
-    <div class="actions">
-      <button class="secondary" onclick="editEntry(${i})">Edit</button>
-      <button class="danger" onclick="deleteEntry(${i})">Delete</button>
-    </div></div>`;
+      ${e.receipt?`<img class="thumb" src="${e.receipt}">`:''}
+    </div>`;
   });
 }
 
-function editEntry(i){
-  const e=getEntries()[i];
-  editIndex=i;
-  dateEl.value=e.date;
-  hours.value=e.hours;
-  force.value=e.force;
-  loadRanks();
-  rank.value=e.rank;
-  loadPoints();
-  point.value=e.point;
-  calculate();
-  switchScreen('calc');
-}
-
-function deleteEntry(i){
-  if(!confirm('Delete this entry?'))return;
-  const all=getEntries();
-  all.splice(i,1);
-  setEntries(all);
-  renderLog();
-}
-
-/* ===== PDF EXPORT (A4 CLAIM STYLE) ===== */
-
-function exportPDF(){
+exportPdf.onclick = ()=>{
   const entries=getEntries();
-  if(!entries.length)return alert('No overtime entries');
+  if(!entries.length) return alert('No overtime entries');
   const w=window.open('','_blank');
-  const forceName=force.options[force.selectedIndex].text;
-  const warrant=warrantEl.value||'________';
+  const warrantNo=document.getElementById('warrant').value||'________';
+  w.document.write(`<html><head><title>OT Claim</title></head><body style="font-family:Arial">
+  <h1>${force.options[force.selectedIndex].text} – Overtime Claim</h1>
+  <p><strong>Warrant:</strong> ${warrantNo}</p><hr>`);
   let total=0;
-
-  w.document.write(`
-  <style>
-    body{font-family:Arial;padding:40px}
-    h1{text-align:center}
-    table{width:100%;border-collapse:collapse;margin-top:20px}
-    th,td{border:1px solid #000;padding:6px;text-align:center}
-  </style>
-  <h1>${forceName} – Overtime Claim</h1>
-  <p><strong>Warrant No:</strong> ${warrant}</p>
-  <table>
-    <tr><th>Date</th><th>Rank</th><th>Point</th><th>Hours</th><th>Net £</th></tr>
-  `);
-
   entries.forEach(e=>{
     total+=e.net;
-    w.document.write(`<tr><td>${e.date}</td><td>${e.rank}</td><td>${e.point}</td><td>${e.hours}</td><td>${e.net.toFixed(2)}</td></tr>`);
+    w.document.write(`<p>${e.date} • ${e.rank} PP${e.point} • ${e.hours}h • £${e.net.toFixed(2)}</p>`);
+    if(e.receipt) w.document.write(`<img src="${e.receipt}" width="250"><br>`);
   });
-
-  w.document.write(`</table><h3>Total £${total.toFixed(2)}</h3>`);
+  w.document.write(`<hr><h3>Total £${total.toFixed(2)}</h3></body></html>`);
   w.print();
-}
+};
 
-/* ===== CALENDAR EXPORT (ICS) ===== */
-
-function exportCalendar(){
+exportCal.onclick = ()=>{
   const entries=getEntries();
-  if(!entries.length)return alert('No overtime');
-  let ics='BEGIN:VCALENDAR
-VERSION:2.0
-';
+  let ics='BEGIN:VCALENDAR\nVERSION:2.0\n';
   entries.forEach(e=>{
     const d=e.date.replace(/-/g,'');
-    ics+=`BEGIN:VEVENT
-DTSTART:${d}T180000
-DTEND:${d}T220000
-SUMMARY:Overtime (${e.hours}h)
-END:VEVENT
-`;
+    ics+=`BEGIN:VEVENT\nDTSTART;VALUE=DATE:${d}\nSUMMARY:Police OT ${e.hours}h\nEND:VEVENT\n`;
   });
   ics+='END:VCALENDAR';
   const blob=new Blob([ics],{type:'text/calendar'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='overtime.ics';
+  a.download='police_ot.ics';
   a.click();
-}
+};
 
 clearData.onclick=()=>{if(confirm('Clear all data?')){localStorage.removeItem(STORE_KEY);renderLog();}};
 
