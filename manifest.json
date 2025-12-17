@@ -1,7 +1,8 @@
 {
   "name": "Police OT Calc",
   "short_name": "Police OT",
-  "start_url": ".",
+  "start_url": "/police-ot-calc/",
+  "scope": "/police-ot-calc/",
   "display": "standalone",
   "background_color": "#f4f6f8",
   "theme_color": "#1e3a8a",
@@ -10,12 +11,14 @@
     {
       "src": "icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
