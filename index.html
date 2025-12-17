@@ -82,7 +82,10 @@
       <div><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
       <div><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
       <div><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+      <div><span>Tax & NI</span><strong>-£<span id="deductions">0.00</span></strong></div>
+      <div><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
     </div>
+  </div>
   </div>
 
 <script>
@@ -135,12 +138,14 @@ const otTypeEl = document.getElementById('otType');
 function loadRanks() {
   rankEl.innerHTML = '';
   const ranks = Object.keys(PAY[forceEl.value]);
+
   ranks.forEach(r => {
     const opt = document.createElement('option');
     opt.value = r;
     opt.textContent = r;
     rankEl.appendChild(opt);
   });
+
   loadPayPoints();
 }
 
@@ -150,15 +155,12 @@ function loadPayPoints() {
 
   points.forEach(p => {
     const opt = document.createElement('option');
-    opt.value = Number(p); // ensure numeric
+    opt.value = Number(p);
     opt.textContent = p;
     pointEl.appendChild(opt);
   });
 
-  // force selection + recalc
   pointEl.selectedIndex = 0;
-  calculate();
-});
   calculate();
 }
 
@@ -175,20 +177,37 @@ function calculate() {
   const base = annual / 52 / WEEKLY_HOURS;
   const otRate = base * parseFloat(otTypeEl.value);
   const hours = parseFloat(hoursEl.value) || 0;
+  const gross = otRate * hours;
+
+  // --- TAX & NI (approx PAYE, locked) ---
+  let taxRate = 0.2; // basic
+  if (annual > 50270) taxRate = 0.4; // higher
+
+  let niRate = 0.08; // main NI
+  if (annual > 50270) niRate = 0.02;
+
+  const tax = gross * taxRate;
+  const ni = gross * niRate;
+  const deductions = tax + ni;
+  const net = gross - deductions;
 
   document.getElementById('base').textContent = base.toFixed(2);
   document.getElementById('ot').textContent = otRate.toFixed(2);
-  document.getElementById('gross').textContent = (otRate * hours).toFixed(2);
+  document.getElementById('gross').textContent = gross.toFixed(2);
+  document.getElementById('deductions').textContent = deductions.toFixed(2);
+  document.getElementById('net').textContent = net.toFixed(2);
 }
 
-// ---- EVENTS ----
-forceEl.addEventListener('change', loadRanks);
-rankEl.addEventListener('change', loadPayPoints);
-hoursEl.addEventListener('input', calculate);
-otTypeEl.addEventListener('change', calculate);
+// ---- INIT & EVENTS ----
+document.addEventListener('DOMContentLoaded', () => {
+  loadRanks();
 
-// ---- INIT ----
-loadRanks();
+  forceEl.addEventListener('change', loadRanks);
+  rankEl.addEventListener('change', loadPayPoints);
+  pointEl.addEventListener('change', calculate);
+  hoursEl.addEventListener('input', calculate);
+  otTypeEl.addEventListener('change', calculate);
+});
 </script>
 </body>
 </html>
