@@ -70,7 +70,19 @@
 
 <div class="result">
   <h3>Overtime Log</h3>
+  <select id="viewMode">
+    <option value="day">By Day</option>
+    <option value="week">By Week</option>
+    <option value="month">By Month</option>
+  </select>
   <div id="calendarList"></div>
+</div>
+
+<div class="result">
+  <h3>Totals</h3>
+  <div class="row"><span>This Month</span><strong>£<span id="monthTotal">0.00</span></strong></div>
+  <div class="row"><span>This Year</span><strong>£<span id="yearTotal">0.00</span></strong></div>
+</div>
 </div>
 </div>
 
