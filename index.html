@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Police OT Calc</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e3a8a">
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -23,12 +27,11 @@
     }
     h1 {
       text-align: center;
-      font-size: 1.4rem;
       margin-bottom: 16px;
     }
     label {
-      display: block;
       margin-top: 12px;
+      display: block;
       font-weight: bold;
     }
     select, input {
@@ -45,13 +48,14 @@
       padding: 12px;
       border-radius: 10px;
     }
-    .result div {
+    .row {
       display: flex;
       justify-content: space-between;
       margin: 6px 0;
     }
   </style>
 </head>
+
 <body>
   <div class="card">
     <h1>Police OT Calc</h1>
@@ -79,192 +83,19 @@
     </select>
 
     <div class="result">
-      <div><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
-      <div><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
-      <div><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
-      <div><span>Tax & NI</span><strong>-£<span id="deductions">0.00</span></strong></div>
-      <div><span>Net Pay</span><strong>£<span id="net">0.00</span></strong>    <button id="saveOt" style="margin-top:12px;width:100%;padding:12px;border-radius:10px;border:none;background:#1e3a8a;color:#fff;font-size:1rem">Save Overtime</button>
-
-    <div class="result" style="margin-top:16px">
-      <h3 style="margin:0 0 8px 0">This Month</h3>
-      <div><span>Total Hours</span><strong><span id="mHours">0</span></strong></div>
-      <div><span>Gross</span><strong>£<span id="mGross">0.00</span></strong></div>
-      <div><span>Net</span><strong>£<span id="mNet">0.00</span></strong></div>
+      <div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
+      <div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+      <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+      <div class="row"><span>Tax & NI</span><strong>-£<span id="deductions">0.00</span></strong></div>
+      <div class="row"><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
     </div>
   </div>
 
-<script>
-// ---- PAY DATA ----
-const WEEKLY_HOURS = 40;
-
-const PAY = {
-  met: {
-    "Police Constable": {
-      1: 31646,
-      2: 32472,
-      3: 33789,
-      4: 35106,
-      5: 37737,
-      6: 43038,
-      7: 50256
-    },
-    "Police Sergeant": {
-      2: 53568,
-      3: 54660,
-      4: 56208
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
     }
-  },
-  other: {
-    "Police Constable": {
-      1: 31646,
-      2: 32472,
-      3: 33789,
-      4: 35106,
-      5: 37737,
-      6: 43038,
-      7: 50256
-    },
-    "Police Sergeant": {
-      2: 53568,
-      3: 54660,
-      4: 56208
-    }
-  }
-};
-
-// ---- ELEMENTS ----
-const forceEl = document.getElementById('force');
-const rankEl = document.getElementById('rank');
-const pointEl = document.getElementById('payPoint');
-const hoursEl = document.getElementById('hours');
-const otTypeEl = document.getElementById('otType');
-
-// ---- FUNCTIONS ----
-function loadRanks() {
-  rankEl.innerHTML = '';
-  const ranks = Object.keys(PAY[forceEl.value]);
-
-  ranks.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = r;
-    rankEl.appendChild(opt);
-  });
-
-  loadPayPoints();
-}
-
-function loadPayPoints() {
-  pointEl.innerHTML = '';
-  const points = Object.keys(PAY[forceEl.value][rankEl.value]);
-
-  points.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = Number(p);
-    opt.textContent = p;
-    pointEl.appendChild(opt);
-  });
-
-  pointEl.selectedIndex = 0;
-  calculate();
-}
-
-function calculate() {
-  if (!rankEl.value || !pointEl.value) return;
-
-  const annual = PAY[forceEl.value][rankEl.value][Number(pointEl.value)];
-  if (!annual) return;
-
-  const base = annual / 52 / WEEKLY_HOURS;
-  const otRate = base * Number(otTypeEl.value);
-  const hours = Number(hoursEl.value) || 0;
-  const gross = otRate * hours;
-
-  // --- TAX & NI (simple estimate) ---
-  const higherRate = annual > 50270;
-  const taxRate = higherRate ? 0.4 : 0.2;
-  const niRate = higherRate ? 0.02 : 0.08;
-
-  const deductions = gross * (taxRate + niRate);
-  const net = gross - deductions;
-
-  document.getElementById('base').textContent = base.toFixed(2);
-  document.getElementById('ot').textContent = otRate.toFixed(2);
-  document.getElementById('gross').textContent = gross.toFixed(2);
-  document.getElementById('deductions').textContent = deductions.toFixed(2);
-  document.getElementById('net').textContent = net.toFixed(2);
-}
-
-// ---- STORAGE ----
-const STORE_KEY = 'police_ot_entries';
-
-function getEntries() {
-  return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
-}
-
-function saveEntry(entry) {
-  const entries = getEntries();
-  entries.push(entry);
-  localStorage.setItem(STORE_KEY, JSON.stringify(entries));
-}
-
-function refreshMonthTotals() {
-  const entries = getEntries();
-  const now = new Date();
-
-  let h = 0, g = 0, n = 0;
-  entries.forEach(e => {
-    const d = new Date(e.date);
-    if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-      h += e.hours;
-      g += e.gross;
-      n += e.net;
-    }
-  });
-
-  document.getElementById('mHours').textContent = h.toFixed(1);
-  document.getElementById('mGross').textContent = g.toFixed(2);
-  document.getElementById('mNet').textContent = n.toFixed(2);
-}
-
-// ---- INIT & EVENTS ----
-document.addEventListener('DOMContentLoaded', () => {
-  loadRanks();
-  refreshMonthTotals();
-
-  forceEl.addEventListener('change', loadRanks);
-  rankEl.addEventListener('change', loadPayPoints);
-  pointEl.addEventListener('change', calculate);
-  hoursEl.addEventListener('input', calculate);
-  otTypeEl.addEventListener('change', calculate);
-
-  document.getElementById('saveOt').addEventListener('click', () => {
-    const gross = parseFloat(document.getElementById('gross').textContent);
-    const net = parseFloat(document.getElementById('net').textContent);
-    if (!gross) return alert('Nothing to save');
-
-    saveEntry({
-      date: new Date().toISOString(),
-      force: forceEl.value,
-      rank: rankEl.value,
-      payPoint: Number(pointEl.value),
-      hours: parseFloat(hoursEl.value),
-      otType: otTypeEl.value,
-      gross,
-      net
-    });
-
-    refreshMonthTotals();
-    alert('Overtime saved');
-  });
-});
-
-  forceEl.addEventListener('change', loadRanks);
-  rankEl.addEventListener('change', loadPayPoints);
-  pointEl.addEventListener('change', calculate);
-  hoursEl.addEventListener('input', calculate);
-  otTypeEl.addEventListener('change', calculate);
-});
-</script>
+  </script>
 </body>
 </html>
