@@ -11,9 +11,13 @@
     label{font-weight:600;margin-top:12px;display:block}
     input,select,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem}
     button{background:#0a84ff;color:#fff;border:none;font-weight:700}
+    button.secondary{background:#e5e5ea;color:#000}
+    button.danger{background:#ff3b30}
     .row{display:flex;justify-content:space-between;margin:6px 0}
     .result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
     .entry{background:#fff;border-radius:12px;padding:10px;margin-top:8px}
+    .actions{display:flex;gap:8px;margin-top:6px}
+    img.thumb{width:60px;border-radius:10px;margin-top:6px}
   </style>
 </head>
 <body>
@@ -49,7 +53,7 @@
     <option value="2">Cancelled RD (Double)</option>
   </select>
 
-  <label>Receipt (upload or photo)</label>
+  <label>Attach Receipt</label>
   <input type="file" id="receipt" accept="image/*" capture="environment">
 
   <div class="result">
@@ -73,89 +77,35 @@
   <button id="exportPdf">Export PDF Claim</button>
 </div>
 
-  <div class="result">
-    <div class="row"><span>Total (selected)</span><strong>£<span id="periodTotal">0.00</span></strong></div>
-    <div class="row"><span>This Month</span><strong>£<span id="monthTotal">0.00</span></strong></div>
-    <div class="row"><span>This Year</span><strong>£<span id="yearTotal">0.00</span></strong></div>
-  </div>
-</div>
-</div>
-
-<div class="card">
-  <h2>Totals</h2>
-  <div class="row"><span>This Month</span><strong>£<span id="monthTotal">0.00</span></strong></div>
-  <div class="row"><span>This Year</span><strong>£<span id="yearTotal">0.00</span></strong></div>
-</div>
-</div>
-
 <script>
-/* ===== DROP 3A: CLAIM PDF EXPORT ===== */
-
-function exportPDF(){
-  const entries = getEntries();
-  if(!entries.length){ alert('No overtime to export'); return; }
-
-  const win = window.open('', '_blank');
-  const forceName = force.options[force.selectedIndex].text;
-  const warrantNo = warrant.value || '__________';
-
-  win.document.write(`
-    <style>
-      body{font-family:Arial;padding:24px}
-      h1,h2{margin-bottom:6px}
-      table{width:100%;border-collapse:collapse;margin-top:12px}
-      th,td{border:1px solid #000;padding:6px;text-align:left}
-      th{background:#eee}
-    </style>
-    <h1>${forceName}</h1>
-    <h2>Overtime Claim</h2>
-    <p><strong>Warrant No:</strong> ${warrantNo}</p>
-    <table>
-      <tr><th>Date</th><th>Hours</th><th>Net (£)</th></tr>
-  `);
-
-  let total = 0;
-  entries.forEach(e=>{
-    total += e.net;
-    win.document.write(`<tr><td>${e.date}</td><td>${e.hours}</td><td>${e.net.toFixed(2)}</td></tr>`);
-  });
-
-  win.document.write(`
-      <tr><th colspan="2">Total</th><th>£${total.toFixed(2)}</th></tr>
-    </table>
-  `);
-
-  win.print();
-}
-
-/* ===== EXISTING CORE LOGIC ===== */
-
 const WEEKLY_HOURS = 40;
 const STORE_KEY = 'police_ot_entries';
+let editIndex = null;
 
 const PAY = {
   met:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}},
   other:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}}
 };
 
-const force = document.getElementById('force');
-const rank = document.getElementById('rank');
-const point = document.getElementById('point');
-const hours = document.getElementById('hours');
-const otType = document.getElementById('otType');
+const force = force;
+const rank = rank;
+const point = point;
+const hours = hours;
+const otType = otType;
+const receipt = document.getElementById('receipt');
 
-const baseEl = document.getElementById('base');
-const otEl = document.getElementById('ot');
-const grossEl = document.getElementById('gross');
-const dedEl = document.getElementById('ded');
-const netEl = document.getElementById('net');
+const baseEl = base;
+const otEl = ot;
+const grossEl = gross;
+const dedEl = ded;
+const netEl = net;
 
 function loadRanks(){rank.innerHTML='';Object.keys(PAY[force.value]).forEach(r=>rank.add(new Option(r,r)));loadPoints();}
 function loadPoints(){point.innerHTML='';Object.keys(PAY[force.value][rank.value]).forEach(p=>point.add(new Option(p,p)));calculate();}
 
 function calculate(){
   const annual = PAY[force.value][rank.value][point.value];
-  if(!annual) return;
+  if(!annual) return null;
   const base = annual / 52 / WEEKLY_HOURS;
   const ot = base * Number(otType.value);
   const hrs = Number(hours.value)||0;
@@ -168,32 +118,22 @@ function calculate(){
   grossEl.textContent = gross.toFixed(2);
   dedEl.textContent = taxNI.toFixed(2);
   netEl.textContent = net.toFixed(2);
-  return {net};
+  return net;
 }
 
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
-
-function fileToBase64(file){
-  return new Promise(res=>{
-    const r=new FileReader();
-    r.onload=()=>res(r.result);
-    r.readAsDataURL(file);
-  });
-}
 function saveEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-save.onclick=async()=>{
-  const c=calculate();
-  if(!c) return;
-  const receiptFile = receipt.files[0];
-  const receiptData = receiptFile ? await fileToBase64(receiptFile) : null;
-  const all=getEntries();
-  all.push({
-    date:date.value,
-    hours:Number(hours.value),
-    net:c.net,
-    receipt: receiptData
-  });
+function fileToBase64(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(file);});}
+
+save.onclick = async()=>{
+  const net = calculate();
+  if(net===null) return;
+  let receiptData = null;
+  if(receipt.files[0]) receiptData = await fileToBase64(receipt.files[0]);
+  const entry = {date:date.value,hours:Number(hours.value),net,receipt:receiptData};
+  const all = getEntries();
+  if(editIndex!==null){all[editIndex]=entry;editIndex=null;} else all.push(entry);
   saveEntries(all);
   receipt.value='';
   render();
@@ -201,20 +141,28 @@ save.onclick=async()=>{
 
 function render(){
   log.innerHTML='';
-  getEntries().forEach(e=>{
-    log.innerHTML+=`
-      <div class='entry'>
-        ${e.date} • ${e.hours}h • £${e.net.toFixed(2)}
-        ${e.receipt?`<div><img src='${e.receipt}' style='max-width:80px;border-radius:8px;margin-top:6px'></div>`:''}
-      </div>`;
+  getEntries().forEach((e,i)=>{
+    log.innerHTML += `<div class='entry'>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}${e.receipt?`<br><img class='thumb' src='${e.receipt}'>`:''}<div class='actions'><button class='secondary' onclick='editEntry(${i})'>Edit</button><button class='danger' onclick='deleteEntry(${i})'>Delete</button></div></div>`;
   });
-} • ${e.hours}h • £${e.net.toFixed(2)}</div>`);}  
+}
+
+function editEntry(i){const e=getEntries()[i];editIndex=i;date.value=e.date;hours.value=e.hours;netEl.textContent=e.net;}
+function deleteEntry(i){if(!confirm('Delete entry?'))return;const all=getEntries();all.splice(i,1);saveEntries(all);render();}
+
+function exportPDF(){
+  const entries = getEntries();
+  if(!entries.length){ alert('No overtime to export'); return; }
+  const win = window.open('', '_blank');
+  win.document.write(`<h1>${force.options[force.selectedIndex].text}</h1><p>Warrant: ${warrant.value}</p><table border='1' width='100%'><tr><th>Date</th><th>Hours</th><th>Net</th></tr>`);
+  let total=0;
+  entries.forEach(e=>{total+=e.net;win.document.write(`<tr><td>${e.date}</td><td>${e.hours}</td><td>£${e.net.toFixed(2)}</td></tr>`);if(e.receipt)win.document.write(`<tr><td colspan='3'><img src='${e.receipt}' width='300'></td></tr>`);});
+  win.document.write(`<tr><th colspan='2'>Total</th><th>£${total.toFixed(2)}</th></tr></table>`);
+  win.print();
+}
 
 exportPdf.onclick = exportPDF;
-
 force.onchange=loadRanks;rank.onchange=loadPoints;hours.oninput=calculate;otType.onchange=calculate;
 date.valueAsDate=new Date();loadRanks();render();
 </script>
 </body>
 </html>
-
