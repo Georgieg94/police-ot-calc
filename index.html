@@ -95,7 +95,7 @@
 
   <div class="field">
     <label>Attach Receipt</label>
-    <input type="file" id="receipt" accept="image/*">
+    <input type="file" id="receipt" accept="image/*" capture="environment">
   </div>
 
   <div class="result">
@@ -148,6 +148,7 @@ const force=document.getElementById('force');
 const rank=document.getElementById('rank');
 const point=document.getElementById('point');
 const warrant=document.getElementById('warrant');
+const receiptInput=document.getElementById('receipt');
 const hours=document.getElementById('hours');
 const startTime=document.getElementById('startTime');
 const finishTime=document.getElementById('finishTime');
@@ -198,15 +199,28 @@ function calculate(){
 }
 
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
+
+function fileToBase64(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});}
 function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-saveBtn.onclick=()=>{
+saveBtn.onclick=async()=>{
   const calc=calculate();
   if(!calc) return;
-  const entry={date:dateEl.value,hours:calc.hrs,net:calc.net,rank:rank.value,point:point.value,warrant:warrant.value};
+  let receiptData=null;
+  if(receiptInput.files[0]) receiptData=await fileToBase64(receiptInput.files[0]);
+  const entry={
+    date:dateEl.value,
+    hours:calc.hrs,
+    net:calc.net,
+    rank:rank.value,
+    point:point.value,
+    warrant:warrant.value,
+    receipt:receiptData
+  };
   const all=getEntries();
   all.push(entry);
   setEntries(all);
+  receiptInput.value='';
   renderLog();
 };
 
@@ -235,7 +249,27 @@ exportCal.onclick=()=>{
   a.click();
 };
 
-exportPdf.onclick=()=>alert('PDF export coming next drop');
+exportPdf.onclick=()=>{
+  const entries=getEntries();
+  if(!entries.length) return alert('No entries to export');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Police OT Claim</title>
+  <style>body{font-family:Arial;padding:24px}h1{margin-bottom:0}h3{margin-top:4px}img{max-width:400px;margin:8px 0}</style>
+  </head><body>`);
+  w.document.write(`<h1>Police Overtime Claim</h1>`);
+  w.document.write(`<h3>Force: ${force.options[force.selectedIndex].text}<br>Rank: ${entries[0].rank}<br>Warrant No: ${entries[0].warrant||''}</h3><hr>`);
+  let total=0;
+  entries.forEach(e=>{
+    total+=e.net;
+    w.document.write(`<p><strong>${e.date}</strong> — ${e.hours}h — £${e.net.toFixed(2)}</p>`);
+    if(e.receipt) w.document.write(`<img src="${e.receipt}">`);
+  });
+  w.document.write(`<hr><h2>Total £${total.toFixed(2)}</h2>`);
+  w.document.write('</body></html>');
+  w.document.close();
+  w.focus();
+  w.print();
+};
 
 clearData.onclick=()=>{if(confirm('Clear all data?')){localStorage.removeItem(STORE_KEY);renderLog();}};
 
