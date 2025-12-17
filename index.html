@@ -5,17 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Police OT Calc</title>
   <style>
-    body {font-family: Arial, sans-serif;background:#f4f6f8;margin:0;padding:16px;display:flex;justify-content:center;}
-    .card {background:#fff;max-width:420px;width:100%;padding:20px;border-radius:14px;box-shadow:0 8px 20px rgba(0,0,0,0.1);}    
-    h1{text-align:center;font-size:1.4rem;}
-    label{display:block;margin-top:12px;font-weight:bold;}
-    select,input,button{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid #ccc;font-size:1rem;}
-    button{background:#1e3a8a;color:#fff;border:none;margin-top:12px;}
-    .result{margin-top:16px;background:#f0f2f5;padding:12px;border-radius:10px;}
-    .row{display:flex;justify-content:space-between;margin:6px 0;}
-    img.thumb{width:60px;margin:4px;border-radius:6px;}
-    #lockScreen{position:fixed;inset:0;background:#1e3a8a;display:flex;align-items:center;justify-content:center;color:#fff;z-index:9999;}
-    #lockBox{background:#fff;color:#000;padding:20px;border-radius:12px;width:280px;text-align:center;}
+    :root{--bg:#f2f2f7;--card:#ffffff;--primary:#0a84ff;--danger:#ff3b30;--text:#111;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial;background:var(--bg);margin:0;padding:16px;display:flex;justify-content:center;color:var(--text);}    
+    .card{background:var(--card);max-width:430px;width:100%;padding:20px;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.08);}    
+    h1{text-align:center;font-size:1.5rem;margin:0 0 8px;}
+    label{display:block;margin-top:12px;font-weight:600;font-size:.9rem;}
+    select,input,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem;}
+    button{background:var(--primary);color:#fff;border:none;margin-top:12px;font-weight:600;}
+    button.secondary{background:#e5e5ea;color:#000;}
+    button.danger{background:var(--danger);}    
+    .result{margin-top:16px;background:#f5f5f7;padding:12px;border-radius:14px;}
+    .row{display:flex;justify-content:space-between;margin:6px 0;font-size:.95rem;}
+    img.thumb{width:60px;margin:4px;border-radius:10px;}
+    .entry{background:#fff;padding:10px;border-radius:12px;margin-top:8px;}
+    .entry-actions{display:flex;gap:8px;margin-top:6px;}
+    #lockScreen{position:fixed;inset:0;background:linear-gradient(180deg,#0a84ff,#003a8f);display:flex;align-items:center;justify-content:center;color:#fff;z-index:9999;}
+    #lockBox{background:#fff;color:#000;padding:24px;border-radius:18px;width:280px;text-align:center;}
   </style>
 </head>
 <body>
@@ -23,7 +28,7 @@
 <div id="lockScreen" style="display:none;">
   <div id="lockBox">
     <h2>Police OT Calc</h2>
-    <input type="password" id="pinInput" maxlength="4" inputmode="numeric" />
+    <input type="password" id="pinInput" maxlength="4" inputmode="numeric" placeholder="PIN" />
     <button id="unlockBtn">Unlock</button>
   </div>
 </div>
@@ -58,156 +63,70 @@
 </div>
 
 <button id="saveOt">Save Overtime</button>
-<button id="exportCal">Add OT to Calendar</button>
-<button id="exportPdf">Export PDF Claim</button>
+<button id="exportPdf" class="secondary">Export PDF Claim</button>
 
 <label>Attach Receipt</label>
-<input type="file" id="receipt" accept="image/*">
+<input type="file" id="receipt" accept="image/*" capture="environment">
 
 <div class="result">
   <h3>Overtime Log</h3>
-  <select id="viewMode"><option value="day">By Day</option><option value="week">By Week</option><option value="month">By Month</option></select>
   <div id="calendarList"></div>
 </div>
 </div>
 
 <script>
-// ===== SECURITY =====
-const PIN_KEY = 'police_ot_pin';
-const LOCK_TIMEOUT = 60000;
+/* ===== PIN LOCK ===== */
+const PIN_KEY='police_ot_pin';
+const LOCK_TIMEOUT=60000;
 let lockTimer;
-
-const lockScreen = document.getElementById('lockScreen');
-const app = document.getElementById('app');
-const pinInput = document.getElementById('pinInput');
-const unlockBtn = document.getElementById('unlockBtn');
-
-function lockApp(){ lockScreen.style.display='flex'; app.style.display='none'; }
-function unlockApp(){ lockScreen.style.display='none'; app.style.display='block'; resetTimer(); }
-function resetTimer(){ clearTimeout(lockTimer); lockTimer=setTimeout(lockApp,LOCK_TIMEOUT); }
-
-if(!localStorage.getItem(PIN_KEY)){
-  const pin = prompt('Set a 4-digit PIN');
-  if(pin) localStorage.setItem(PIN_KEY,pin);
-}
-
-unlockBtn.onclick = () => {
-  if(pinInput.value === localStorage.getItem(PIN_KEY)) unlockApp();
-  else alert('Incorrect PIN');
-};
-
+const lockScreen=document.getElementById('lockScreen');
+const app=document.getElementById('app');
+const pinInput=document.getElementById('pinInput');
+const unlockBtn=document.getElementById('unlockBtn');
+function lockApp(){lockScreen.style.display='flex';app.style.display='none';}
+function unlockApp(){lockScreen.style.display='none';app.style.display='block';resetTimer();}
+function resetTimer(){clearTimeout(lockTimer);lockTimer=setTimeout(lockApp,LOCK_TIMEOUT);}    
+if(!localStorage.getItem(PIN_KEY)){const p=prompt('Set a 4-digit PIN');if(p)localStorage.setItem(PIN_KEY,p);}    
+unlockBtn.onclick=()=>{if(pinInput.value===localStorage.getItem(PIN_KEY))unlockApp();else alert('Incorrect PIN');};
 ['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,resetTimer));
 lockApp();
 
-// ===== CORE =====
-const WEEKLY_HOURS = 40;
-const STORE_KEY = 'police_ot_entries';
+/* ===== CORE ===== */
+const WEEKLY_HOURS=40;
+const STORE_KEY='police_ot_entries';
+const PAY={met:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}},other:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}}};
+const forceEl=force,rankEl=rank,pointEl=payPoint,hoursEl=hours,otTypeEl=otType;
+const baseEl=base,otEl=ot,grossEl=gross,deductionsEl=deductions,netEl=net;
+let editIndex=null;
 
-const PAY = {
-  met:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}},
-  other:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}}
-};
+function loadRanks(){rankEl.innerHTML='';Object.keys(PAY[forceEl.value]).forEach(r=>rankEl.add(new Option(r,r)));loadPayPoints();}
+function loadPayPoints(){pointEl.innerHTML='';Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.add(new Option(p,p)));calculate();}
+function calculate(){const annual=PAY[forceEl.value][rankEl.value][pointEl.value];if(!annual)return;const base=annual/52/WEEKLY_HOURS;const otRate=base*Number(otTypeEl.value);const hrs=Number(hoursEl.value)||0;const gross=otRate*hrs;const higher=annual>50270;const ded=gross*((higher?.4:.2)+(higher?.02:.08));const net=gross-ded;baseEl.textContent=base.toFixed(2);otEl.textContent=otRate.toFixed(2);grossEl.textContent=gross.toFixed(2);deductionsEl.textContent=ded.toFixed(2);netEl.textContent=net.toFixed(2);}    
 
-const forceEl = document.getElementById('force');
-const rankEl = document.getElementById('rank');
-const pointEl = document.getElementById('payPoint');
-const hoursEl = document.getElementById('hours');
-const otTypeEl = document.getElementById('otType');
+/* ===== STORAGE + AES ===== */
+async function getKey(pin){return crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);}
+async function deriveAES(pin){const baseKey=await getKey(pin);return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode('police-ot'),iterations:100000,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+async function encrypt(data){const iv=crypto.getRandomValues(new Uint8Array(12));const key=await deriveAES(localStorage.getItem(PIN_KEY));const enc=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(data)));return {iv:[...iv],data:[...new Uint8Array(enc)]};}
+async function decrypt(blob){const key=await deriveAES(localStorage.getItem(PIN_KEY));const dec=await crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(blob.iv)},key,new Uint8Array(blob.data));return JSON.parse(new TextDecoder().decode(dec));}
+async function getEntries(){const raw=localStorage.getItem(STORE_KEY);return raw?await decrypt(JSON.parse(raw)):[];}
+async function setEntries(e){const enc=await encrypt(e);localStorage.setItem(STORE_KEY,JSON.stringify(enc));}
 
-const baseEl = document.getElementById('base');
-const otEl = document.getElementById('ot');
-const grossEl = document.getElementById('gross');
-const deductionsEl = document.getElementById('deductions');
-const netEl = document.getElementById('net');
+function fileToBase64(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});}
 
-function loadRanks(){
-  rankEl.innerHTML='';
-  Object.keys(PAY[forceEl.value]).forEach(r=>rankEl.add(new Option(r,r)));
-  loadPayPoints();
-}
+/* ===== CRUD ===== */
+async function saveCurrent(){let receiptData=null;if(receipt.files[0])receiptData=await fileToBase64(receipt.files[0]);const entry={date:otDate.value,hours:Number(hoursEl.value),net:Number(netEl.textContent),receipt:receiptData};const all=await getEntries();if(editIndex!==null){all[editIndex]=entry;editIndex=null;}else all.push(entry);await setEntries(all);renderList();}
+async function deleteEntry(i){if(!confirm('Delete entry?'))return;const all=await getEntries();all.splice(i,1);await setEntries(all);renderList();}
+async function editEntry(i){const e=(await getEntries())[i];editIndex=i;otDate.value=e.date;hoursEl.value=e.hours;netEl.textContent=e.net;}
 
-function loadPayPoints(){
-  pointEl.innerHTML='';
-  Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.add(new Option(p,p)));
-  calculate();
-}
+async function renderList(){calendarList.innerHTML='';(await getEntries()).forEach((e,i)=>{calendarList.innerHTML+=`<div class='entry'><div>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</div>${e.receipt?`<img class='thumb' src='${e.receipt}'>`:''}<div class='entry-actions'><button class='secondary' onclick='editEntry(${i})'>Edit</button><button class='danger' onclick='deleteEntry(${i})'>Delete</button></div></div>`;});}
 
-function calculate(){
-  const annual = PAY[forceEl.value][rankEl.value][pointEl.value];
-  if(!annual) return;
-  const base = annual/52/WEEKLY_HOURS;
-  const otRate = base*Number(otTypeEl.value);
-  const hrs = Number(hoursEl.value)||0;
-  const gross = otRate*hrs;
-  const higher = annual>50270;
-  const deductions = gross*((higher?0.4:0.2)+(higher?0.02:0.08));
-  const net = gross-deductions;
-  baseEl.textContent=base.toFixed(2);
-  otEl.textContent=otRate.toFixed(2);
-  grossEl.textContent=gross.toFixed(2);
-  deductionsEl.textContent=deductions.toFixed(2);
-  netEl.textContent=net.toFixed(2);
-}
+/* ===== PDF EXPORT ===== */
+exportPdf.onclick=async()=>{const w=window.open('','_blank');const entries=await getEntries();let total=0;w.document.write(`<h2>${forceEl.options[forceEl.selectedIndex].text}<br>Warrant No: __________</h2>`);entries.forEach(e=>{total+=e.net;w.document.write(`<p>${e.date} — ${e.hours}h — £${e.net.toFixed(2)}</p>`);if(e.receipt)w.document.write(`<img src='${e.receipt}' width='250'>`);});w.document.write(`<h3>Total £${total.toFixed(2)}</h3>`);w.print();};
 
-function getEntries(){ return JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); }
-function saveEntry(e){ const a=getEntries(); a.push(e); localStorage.setItem(STORE_KEY,JSON.stringify(a)); }
-
-function fileToBase64(file){ return new Promise(res=>{const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file);}); }
-
-function renderCalendarView(){
-  const list = document.getElementById('calendarList');
-  const mode = document.getElementById('viewMode').value;
-  list.innerHTML='';
-  const grouped={};
-  getEntries().forEach(e=>{
-    const d=new Date(e.date);
-    const key = mode==='day'?d.toLocaleDateString():mode==='week'?`Week of ${d.toLocaleDateString()}`:d.toLocaleString('default',{month:'long',year:'numeric'});
-    grouped[key]??={h:0,n:0};
-    grouped[key].h+=e.hours; grouped[key].n+=e.net;
-  });
-  Object.keys(grouped).forEach(k=>list.innerHTML+=`<div class='row'><span>${k} • ${grouped[k].h}h</span><strong>£${grouped[k].n.toFixed(2)}</strong></div>`);
-}
-
-// ===== EVENTS =====
-forceEl.onchange = loadRanks;
-rankEl.onchange = loadPayPoints;
-payPoint.onchange = calculate;
-hoursEl.oninput = calculate;
-otTypeEl.onchange = calculate;
-
-saveOt.onclick = async()=>{
-  if(!Number(grossEl.textContent)) return alert('Nothing to save');
-  let receiptData=null;
-  if(receipt.files[0]) receiptData=await fileToBase64(receipt.files[0]);
-  saveEntry({date:otDate.value,hours:Number(hoursEl.value),net:Number(netEl.textContent),receipt:receiptData});
-  renderCalendarView();
-};
-
-exportCal.onclick = ()=>{
-  const entries=getEntries();
-  if(!entries.length) return alert('No overtime');
-  let ics='BEGIN:VCALENDAR\nVERSION:2.0\n';
-  entries.forEach(e=>{
-    const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];
-    ics+=`BEGIN:VEVENT\nDTSTART:${d}\nSUMMARY:Police OT (${e.hours}h)\nEND:VEVENT\n`;
-  });
-  ics+='END:VCALENDAR';
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
-  a.download='police-overtime.ics';
-  a.click();
-};
-
-exportPdf.onclick = ()=>{
-  const w=window.open('','_blank');
-  let total=0;
-  w.document.write('<h2>Police OT Claim</h2>');
-  getEntries().forEach(e=>{ total+=e.net; w.document.write(`<p>${e.date} — ${e.hours}h — £${e.net.toFixed(2)}</p>`); if(e.receipt) w.document.write(`<img src='${e.receipt}' width='300'>`); });
-  w.document.write(`<h3>Total £${total.toFixed(2)}</h3>`);
-  w.print();
-};
-
-window.onload = ()=>{ otDate.valueAsDate=new Date(); loadRanks(); renderCalendarView(); };
+/* ===== INIT ===== */
+forceEl.onchange=loadRanks;rankEl.onchange=loadPayPoints;payPoint.onchange=calculate;hoursEl.oninput=calculate;otTypeEl.onchange=calculate;
+saveOt.onclick=saveCurrent;
+window.onload=()=>{otDate.valueAsDate=new Date();loadRanks();renderList();};
 </script>
 </body>
 </html>
