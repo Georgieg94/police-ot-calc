@@ -1,21 +1,21 @@
-const CACHE_NAME = "police-ot-calc-v1";
-const FILES_TO_CACHE = [
+const CACHE_NAME = "police-ot-v1";
+const FILES = [
   "./",
   "./index.html",
+  "./app.js",
   "./manifest.json",
-  "./icon.png"
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
+self.addEventListener("install", e => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES))
   );
 });
 
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(
-      response => response || fetch(event.request)
-    )
+self.addEventListener("fetch", e => {
+  e.respondWith(
+    caches.match(e.request).then(res => res || fetch(e.request))
   );
 });
