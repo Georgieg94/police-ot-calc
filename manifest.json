@@ -1,9 +1,22 @@
 {
-  "name":"Police OT",
-  "short_name":"Police OT",
-  "start_url":".",
-  "display":"standalone",
-  "theme_color":"#003a8f",
-  "background_color":"#f2f2f7",
-  "icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"}]
+  "name": "Police OT",
+  "short_name": "Police OT",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#003a8f",
+  "background_color": "#f2f2f7",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
