@@ -88,18 +88,12 @@
 </nav>
 
 <script>
+/* =====================
+   DROP 16 – PDF + CALENDAR
+===================== */
+
 const WEEKLY_HOURS = 40;
 const STORE_KEY = 'police_ot_entries';
-
-// simple attachment helper
-function fileToBase64(file){
-  return new Promise(res=>{
-    if(!file) return res(null);
-    const r=new FileReader();
-    r.onload=()=>res(r.result);
-    r.readAsDataURL(file);
-  });
-}
 
 const PAY = {
   met:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}},
@@ -112,6 +106,7 @@ const point = document.getElementById('point');
 const hours = document.getElementById('hours');
 const otType = document.getElementById('otType');
 const dateEl = document.getElementById('date');
+const warrantEl = document.getElementById('warrant');
 
 const baseEl = document.getElementById('base');
 const otEl = document.getElementById('ot');
@@ -148,46 +143,39 @@ function calculate(){
   grossEl.textContent = gross.toFixed(2);
   dedEl.textContent = taxNI.toFixed(2);
   netEl.textContent = net.toFixed(2);
-  return {net, hrs};
+  return {net, hrs, gross, taxNI};
 }
 
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
 function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-save.onclick=async()=>{
+save.onclick=()=>{
   const calc = calculate();
   if(!calc) return;
   const all = getEntries();
-  const attachmentFile = attachment.files[0];
-  const attachmentData = await fileToBase64(attachmentFile);
-
   const entry = {
     date: dateEl.value,
-    hours: calc.hrs,
-    net: calc.net,
+    force: force.value,
     rank: rank.value,
     point: point.value,
-    force: force.value,
-    attachment: attachmentData
+    hours: calc.hrs,
+    gross: calc.gross,
+    taxNI: calc.taxNI,
+    net: calc.net
   };
-
   if(editIndex!==null){all[editIndex]=entry;editIndex=null;} else all.push(entry);
   setEntries(all);
-  attachment.value='';
   renderLog();
 };
 
 function renderLog(){
   log.innerHTML='';
   getEntries().forEach((e,i)=>{
-    log.innerHTML+=`<div class="entry">
-      ${e.date} • ${e.rank} ${e.point} • ${e.hours}h • £${e.net.toFixed(2)}
-      ${e.attachment?'<div>📎 Attachment saved</div>':''}
-      <div class="actions">
-        <button class="secondary" onclick="editEntry(${i})">Edit</button>
-        <button class="danger" onclick="deleteEntry(${i})">Delete</button>
-      </div>
-    </div>`;
+    log.innerHTML+=`<div class="entry">${e.date} • ${e.hours}h • £${e.net.toFixed(2)}
+    <div class="actions">
+      <button class="secondary" onclick="editEntry(${i})">Edit</button>
+      <button class="danger" onclick="deleteEntry(${i})">Delete</button>
+    </div></div>`;
   });
 }
 
@@ -196,7 +184,12 @@ function editEntry(i){
   editIndex=i;
   dateEl.value=e.date;
   hours.value=e.hours;
-  netEl.textContent=e.net.toFixed(2);
+  force.value=e.force;
+  loadRanks();
+  rank.value=e.rank;
+  loadPoints();
+  point.value=e.point;
+  calculate();
   switchScreen('calc');
 }
 
@@ -208,18 +201,62 @@ function deleteEntry(i){
   renderLog();
 }
 
-exportPdf.onclick=()=>{
+/* ===== PDF EXPORT (A4 CLAIM STYLE) ===== */
+
+function exportPDF(){
   const entries=getEntries();
-  if(!entries.length)return alert('No overtime');
+  if(!entries.length)return alert('No overtime entries');
   const w=window.open('','_blank');
   const forceName=force.options[force.selectedIndex].text;
-  const warrantNo=warrant.value||'__________';
+  const warrant=warrantEl.value||'________';
   let total=0;
-  w.document.write(`<h1>${forceName} – Overtime Claim</h1><p>Warrant No: ${warrantNo}</p><hr>`);
-  entries.forEach(e=>{total+=e.net;w.document.write(`<p>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</p>`);});
-  w.document.write(`<hr><h3>Total £${total.toFixed(2)}</h3>`);
+
+  w.document.write(`
+  <style>
+    body{font-family:Arial;padding:40px}
+    h1{text-align:center}
+    table{width:100%;border-collapse:collapse;margin-top:20px}
+    th,td{border:1px solid #000;padding:6px;text-align:center}
+  </style>
+  <h1>${forceName} – Overtime Claim</h1>
+  <p><strong>Warrant No:</strong> ${warrant}</p>
+  <table>
+    <tr><th>Date</th><th>Rank</th><th>Point</th><th>Hours</th><th>Net £</th></tr>
+  `);
+
+  entries.forEach(e=>{
+    total+=e.net;
+    w.document.write(`<tr><td>${e.date}</td><td>${e.rank}</td><td>${e.point}</td><td>${e.hours}</td><td>${e.net.toFixed(2)}</td></tr>`);
+  });
+
+  w.document.write(`</table><h3>Total £${total.toFixed(2)}</h3>`);
   w.print();
-};
+}
+
+/* ===== CALENDAR EXPORT (ICS) ===== */
+
+function exportCalendar(){
+  const entries=getEntries();
+  if(!entries.length)return alert('No overtime');
+  let ics='BEGIN:VCALENDAR
+VERSION:2.0
+';
+  entries.forEach(e=>{
+    const d=e.date.replace(/-/g,'');
+    ics+=`BEGIN:VEVENT
+DTSTART:${d}T180000
+DTEND:${d}T220000
+SUMMARY:Overtime (${e.hours}h)
+END:VEVENT
+`;
+  });
+  ics+='END:VCALENDAR';
+  const blob=new Blob([ics],{type:'text/calendar'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='overtime.ics';
+  a.click();
+}
 
 clearData.onclick=()=>{if(confirm('Clear all data?')){localStorage.removeItem(STORE_KEY);renderLog();}};
 
