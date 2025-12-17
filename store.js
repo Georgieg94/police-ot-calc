@@ -1,17 +1,18 @@
-function getEntries() {
-  return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+const STORE_KEY='police_ot_entries';
+
+function storeGet(){
+return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
 }
 
-function saveEntry(entry) {
-  const all = getEntries();
-  all.push(entry);
-  localStorage.setItem(STORE_KEY, JSON.stringify(all));
+function storeAdd(e){
+const all=storeGet();
+all.push(e);
+localStorage.setItem(STORE_KEY,JSON.stringify(all));
 }
 
-function fileToBase64(file) {
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
+clearData.onclick=()=>{
+if(confirm('Clear all data?')){
+localStorage.removeItem(STORE_KEY);
+renderLog();
 }
+};
