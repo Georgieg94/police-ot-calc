@@ -11,14 +11,20 @@
     label{font-weight:600;margin-top:12px;display:block}
     input,select,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem}
     button{background:#0a84ff;color:#fff;border:none;font-weight:700}
+    button.secondary{background:#e5e5ea;color:#000}
+    button.danger{background:#ff3b30}
     .row{display:flex;justify-content:space-between;margin:6px 0}
     .result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
     .entry{background:#fff;border-radius:12px;padding:10px;margin-top:8px}
+    .actions{display:flex;gap:8px;margin-top:6px}
+    nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #ddd;display:flex}
+    nav button{flex:1;border-radius:0;background:#fff;color:#000;font-weight:600}
+    nav button.active{color:#0a84ff}
   </style>
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="screen-calc">
   <h1>Police OT</h1>
 
   <label>Warrant Number</label>
@@ -60,27 +66,22 @@
   <button id="save">Save Overtime</button>
 </div>
 
-<div class="card">
+<div class="card" id="screen-log" style="display:none">
   <h2>Overtime Log</h2>
-  <select id="viewMode">
-    <option value="day">By Day</option>
-    <option value="week">By Week</option>
-    <option value="month">By Month</option>
-    <option value="year">By Year</option>
-  </select>
   <div id="log"></div>
 </div>
 
-<div class="card">
-  <h2>Totals</h2>
-  <div class="row"><span>This Month</span><strong>£<span id="monthTotal">0.00</span></strong></div>
-  <div class="row"><span>This Year</span><strong>£<span id="yearTotal">0.00</span></strong></div>
+<div class="card" id="screen-settings" style="display:none">
+  <h2>Settings</h2>
+  <label>Clear all overtime data</label>
+  <button class="danger" id="clearData">Clear Data</button>
 </div>
 
-<div class="card">
-  <h2>Claim Export</h2>
-  <button id="exportPdf">Export PDF Claim</button>
-</div>
+<nav>
+  <button id="tabCalc" class="active">Calc</button>
+  <button id="tabLog">Log</button>
+  <button id="tabSettings">Settings</button>
+</nav>
 
 <script>
 const WEEKLY_HOURS = 40;
@@ -97,18 +98,15 @@ const point = document.getElementById('point');
 const hours = document.getElementById('hours');
 const otType = document.getElementById('otType');
 const dateEl = document.getElementById('date');
-const viewMode = document.getElementById('viewMode');
 
 const baseEl = document.getElementById('base');
 const otEl = document.getElementById('ot');
 const grossEl = document.getElementById('gross');
 const dedEl = document.getElementById('ded');
 const netEl = document.getElementById('net');
-const log = document.getElementById('log');
-const monthTotalEl = document.getElementById('monthTotal');
-const yearTotalEl = document.getElementById('yearTotal');
 
-/* ===== PAY LOADERS ===== */
+let editIndex = null;
+
 function loadRanks(){
   rank.innerHTML='';
   Object.keys(PAY[force.value]).forEach(r=>rank.add(new Option(r,r)));
@@ -121,7 +119,6 @@ function loadPoints(){
   calculate();
 }
 
-/* ===== CALCULATION ===== */
 function calculate(){
   const annual = PAY[force.value][rank.value][point.value];
   if(!annual) return null;
@@ -137,123 +134,85 @@ function calculate(){
   grossEl.textContent = gross.toFixed(2);
   dedEl.textContent = taxNI.toFixed(2);
   netEl.textContent = net.toFixed(2);
-  return {net, gross, hrs};
+  return {net, hrs};
 }
 
-/* ===== STORAGE ===== */
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
 function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-/* ===== RECEIPTS ===== */
-const receiptInput = document.createElement('input');
-receiptInput.type='file';
-receiptInput.accept='image/*';
-receiptInput.capture='environment';
-
-function fileToBase64(file){
-  return new Promise(res=>{
-    const r=new FileReader();
-    r.onload=()=>res(r.result);
-    r.readAsDataURL(file);
-  });
-}
-
-const receiptBtn = document.createElement('button');
-receiptBtn.textContent='Attach Receipt';
-receiptBtn.onclick=()=>receiptInput.click();
-
-/* ===== SAVE OT ===== */
-save.onclick = async()=>{
-  const c = calculate();
-  if(!c) return;
-  let receipt=null;
-  if(receiptInput.files[0]) receipt = await fileToBase64(receiptInput.files[0]);
+save.onclick=()=>{
+  const calc = calculate();
+  if(!calc) return;
   const all = getEntries();
-  all.push({date:dateEl.value,hours:c.hrs,gross:c.gross,net:c.net,receipt});
+  const entry = {date:dateEl.value,hours:calc.hrs,net:calc.net};
+  if(editIndex!==null){all[editIndex]=entry;editIndex=null;} else all.push(entry);
   setEntries(all);
-  receiptInput.value='';
-  render();
+  renderLog();
 };
 
-/* ===== GROUPED LOG + TOTALS ===== */
-function groupKey(d){
-  if(viewMode.value==='day') return d.toLocaleDateString();
-  if(viewMode.value==='week'){
-    const start=new Date(d);start.setDate(d.getDate()-d.getDay());
-    return 'Week of '+start.toLocaleDateString();
-  }
-  if(viewMode.value==='month') return d.toLocaleString('default',{month:'long',year:'numeric'});
-  return d.getFullYear();
-}
-
-function render(){
+function renderLog(){
   log.innerHTML='';
-  const entries=getEntries();
-  const grouped={};
-  const now=new Date();
-  let m=0,y=0;
-
-  entries.forEach(e=>{
-    const d=new Date(e.date);
-    const k=groupKey(d);
-    grouped[k]??={h:0,n:0,items:[]};
-    grouped[k].h+=e.hours;
-    grouped[k].n+=e.net;
-    grouped[k].items.push(e);
-    if(d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear())m+=e.net;
-    if(d.getFullYear()===now.getFullYear())y+=e.net;
+  getEntries().forEach((e,i)=>{
+    log.innerHTML+=`<div class="entry">${e.date} • ${e.hours}h • £${e.net.toFixed(2)}
+    <div class="actions">
+      <button class="secondary" onclick="editEntry(${i})">Edit</button>
+      <button class="danger" onclick="deleteEntry(${i})">Delete</button>
+    </div></div>`;
   });
-
-  Object.keys(grouped).forEach(k=>{
-    log.innerHTML+=`<div class='entry'><strong>${k}</strong><br>${grouped[k].h}h • £${grouped[k].n.toFixed(2)}</div>`;
-    grouped[k].items.forEach(i=>{
-      log.innerHTML+=`<div class='entry'>${i.date} • ${i.hours}h • £${i.net.toFixed(2)}${i.receipt?`<br><img src='${i.receipt}' style='width:90px;border-radius:8px'>`:''}</div>`;
-    });
-  });
-
-  monthTotalEl.textContent=m.toFixed(2);
-  yearTotalEl.textContent=y.toFixed(2);
 }
 
-/* ===== CALENDAR EXPORT ===== */
-function exportCalendar(){
-  const entries=getEntries();
-  if(!entries.length){alert('No overtime');return;}
-  let ics='BEGIN:VCALENDAR
-VERSION:2.0
-';
-  entries.forEach(e=>{
-    const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];
-    ics+=`BEGIN:VEVENT
-DTSTART:${d}
-SUMMARY:Police Overtime (${e.hours}h)
-DESCRIPTION:Net £${e.net.toFixed(2)}
-END:VEVENT
-`;
-  });
-  ics+='END:VCALENDAR';
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
-  a.download='police-overtime.ics';
-  a.click();
+function editEntry(i){
+  const e=getEntries()[i];
+  editIndex=i;
+  dateEl.value=e.date;
+  hours.value=e.hours;
+  netEl.textContent=e.net.toFixed(2);
+  switchScreen('calc');
 }
 
-const calBtn=document.createElement('button');
-calBtn.textContent='Export to Calendar';
-calBtn.onclick=exportCalendar;
+function deleteEntry(i){
+  if(!confirm('Delete this entry?'))return;
+  const all=getEntries();
+  all.splice(i,1);
+  setEntries(all);
+  renderLog();
+}
 
-/* ===== INIT ===== */
+exportPdf.onclick=()=>{
+  const entries=getEntries();
+  if(!entries.length)return alert('No overtime');
+  const w=window.open('','_blank');
+  const forceName=force.options[force.selectedIndex].text;
+  const warrantNo=warrant.value||'__________';
+  let total=0;
+  w.document.write(`<h1>${forceName} – Overtime Claim</h1><p>Warrant No: ${warrantNo}</p><hr>`);
+  entries.forEach(e=>{total+=e.net;w.document.write(`<p>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</p>`);});
+  w.document.write(`<hr><h3>Total £${total.toFixed(2)}</h3>`);
+  w.print();
+};
+
+clearData.onclick=()=>{if(confirm('Clear all data?')){localStorage.removeItem(STORE_KEY);renderLog();}};
+
+function switchScreen(s){
+  screenCalc.style.display=s==='calc'?'block':'none';
+  screenLog.style.display=s==='log'?'block':'none';
+  screenSettings.style.display=s==='settings'?'block':'none';
+  tabCalc.classList.toggle('active',s==='calc');
+  tabLog.classList.toggle('active',s==='log');
+  tabSettings.classList.toggle('active',s==='settings');
+}
+
+tabCalc.onclick=()=>switchScreen('calc');
+tabLog.onclick=()=>switchScreen('log');
+tabSettings.onclick=()=>switchScreen('settings');
+
 force.onchange=loadRanks;
 rank.onchange=loadPoints;
 hours.oninput=calculate;
 otType.onchange=calculate;
-viewMode.onchange=render;
 dateEl.valueAsDate=new Date();
 loadRanks();
-render();
-
-save.after(receiptBtn);
-receiptBtn.after(calBtn);
+renderLog();
 </script>
 </body>
 </html>
