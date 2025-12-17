@@ -86,7 +86,6 @@
       <div><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
     </div>
   </div>
-  </div>
 
 <script>
 // ---- PAY DATA ----
@@ -167,28 +166,20 @@ function loadPayPoints() {
 function calculate() {
   if (!rankEl.value || !pointEl.value) return;
 
-  const force = forceEl.value;
-  const rank = rankEl.value;
-  const payPoint = Number(pointEl.value);
-
-  const annual = PAY[force][rank][payPoint];
+  const annual = PAY[forceEl.value][rankEl.value][Number(pointEl.value)];
   if (!annual) return;
 
   const base = annual / 52 / WEEKLY_HOURS;
-  const otRate = base * parseFloat(otTypeEl.value);
-  const hours = parseFloat(hoursEl.value) || 0;
+  const otRate = base * Number(otTypeEl.value);
+  const hours = Number(hoursEl.value) || 0;
   const gross = otRate * hours;
 
-  // --- TAX & NI (approx PAYE, locked) ---
-  let taxRate = 0.2; // basic
-  if (annual > 50270) taxRate = 0.4; // higher
+  // --- TAX & NI (simple estimate) ---
+  const higherRate = annual > 50270;
+  const taxRate = higherRate ? 0.4 : 0.2;
+  const niRate = higherRate ? 0.02 : 0.08;
 
-  let niRate = 0.08; // main NI
-  if (annual > 50270) niRate = 0.02;
-
-  const tax = gross * taxRate;
-  const ni = gross * niRate;
-  const deductions = tax + ni;
+  const deductions = gross * (taxRate + niRate);
   const net = gross - deductions;
 
   document.getElementById('base').textContent = base.toFixed(2);
