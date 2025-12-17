@@ -94,12 +94,23 @@ let lockTimer;
 const lockScreen=document.getElementById('lockScreen');
 const app=document.getElementById('app');
 const pinInput=document.getElementById('pinInput');
+let biometricEnabled=false;
 const unlockBtn=document.getElementById('unlockBtn');
 function lockApp(){lockScreen.style.display='flex';app.style.display='none';}
 function unlockApp(){lockScreen.style.display='none';app.style.display='block';resetTimer();}
 function resetTimer(){clearTimeout(lockTimer);lockTimer=setTimeout(lockApp,LOCK_TIMEOUT);}    
 if(!localStorage.getItem(PIN_KEY)){const p=prompt('Set a 4-digit PIN');if(p)localStorage.setItem(PIN_KEY,p);}    
-unlockBtn.onclick=()=>{if(pinInput.value===localStorage.getItem(PIN_KEY))unlockApp();else alert('Incorrect PIN');};
+unlockBtn.onclick=async()=>{
+  if(biometricEnabled){
+    try{
+      await navigator.credentials.get({publicKey:{challenge:new Uint8Array(32),timeout:60000,userVerification:'required'}});
+      unlockApp();
+      return;
+    }catch{}
+  }
+  if(pinInput.value===localStorage.getItem(PIN_KEY))unlockApp();
+  else alert('Incorrect PIN');
+};else alert('Incorrect PIN');};
 ['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,resetTimer));
 lockApp();
 
@@ -113,7 +124,22 @@ let editIndex=null;
 
 function loadRanks(){rankEl.innerHTML='';Object.keys(PAY[forceEl.value]).forEach(r=>rankEl.add(new Option(r,r)));loadPayPoints();}
 function loadPayPoints(){pointEl.innerHTML='';Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.add(new Option(p,p)));calculate();}
-function calculate(){const annual=PAY[forceEl.value][rankEl.value][pointEl.value];if(!annual)return;const base=annual/52/WEEKLY_HOURS;const otRate=base*Number(otTypeEl.value);const hrs=Number(hoursEl.value)||0;const gross=otRate*hrs;const higher=annual>50270;const ded=gross*((higher?.4:.2)+(higher?.02:.08));const net=gross-ded;baseEl.textContent=base.toFixed(2);otEl.textContent=otRate.toFixed(2);grossEl.textContent=gross.toFixed(2);deductionsEl.textContent=ded.toFixed(2);netEl.textContent=net.toFixed(2);}    
+function calculate(){
+  const annual=PAY[forceEl.value][rankEl.value][pointEl.value];
+  if(!annual)return;
+  const base=annual/52/WEEKLY_HOURS;
+  const otRate=base*Number(otTypeEl.value);
+  const hrs=Number(hoursEl.value)||0;
+  const gross=otRate*hrs;
+  const higher=annual>50270;
+  const ded=gross*((higher?0.4:0.2)+(higher?0.02:0.08));
+  const net=gross-ded;
+  baseEl.textContent=base.toFixed(2);
+  otEl.textContent=otRate.toFixed(2);
+  grossEl.textContent=gross.toFixed(2);
+  deductionsEl.textContent=ded.toFixed(2);
+  netEl.textContent=net.toFixed(2);
+}    
 
 /* ===== STORAGE + AES ===== */
 async function getKey(pin){return crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);}
@@ -130,7 +156,30 @@ async function saveCurrent(){let receiptData=null;if(receipt.files[0])receiptDat
 async function deleteEntry(i){if(!confirm('Delete entry?'))return;const all=await getEntries();all.splice(i,1);await setEntries(all);renderList();}
 async function editEntry(i){const e=(await getEntries())[i];editIndex=i;otDate.value=e.date;hoursEl.value=e.hours;netEl.textContent=e.net;}
 
-async function renderList(){calendarList.innerHTML='';(await getEntries()).forEach((e,i)=>{calendarList.innerHTML+=`<div class='entry'><div>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</div>${e.receipt?`<img class='thumb' src='${e.receipt}'>`:''}<div class='entry-actions'><button class='secondary' onclick='editEntry(${i})'>Edit</button><button class='danger' onclick='deleteEntry(${i})'>Delete</button></div></div>`;});}
+async function renderList(){
+  calendarList.innerHTML='';
+  const entries=await getEntries();
+  const now=new Date();
+  let monthTotal=0,yearTotal=0;
+
+  entries.forEach((e,i)=>{
+    const d=new Date(e.date);
+    if(d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear())monthTotal+=e.net;
+    if(d.getFullYear()===now.getFullYear())yearTotal+=e.net;
+
+    calendarList.innerHTML+=`<div class='entry'>
+      <div>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</div>
+      ${e.receipt?`<img class='thumb' src='${e.receipt}'>`:''}
+      <div class='entry-actions'>
+        <button class='secondary' onclick='editEntry(${i})'>Edit</button>
+        <button class='danger' onclick='deleteEntry(${i})'>Delete</button>
+      </div>
+    </div>`;
+  });
+
+  monthTotalEl.textContent=monthTotal.toFixed(2);
+  yearTotalEl.textContent=yearTotal.toFixed(2);
+}}
 
 /* ===== PDF EXPORT ===== */
 exportPdf.onclick=async()=>{const w=window.open('','_blank');const entries=await getEntries();let total=0;w.document.write(`<h2>${forceEl.options[forceEl.selectedIndex].text}<br>Warrant No: __________</h2>`);entries.forEach(e=>{total+=e.net;w.document.write(`<p>${e.date} — ${e.hours}h — £${e.net.toFixed(2)}</p>`);if(e.receipt)w.document.write(`<img src='${e.receipt}' width='250'>`);});w.document.write(`<h3>Total £${total.toFixed(2)}</h3>`);w.print();};
