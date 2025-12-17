@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Police OT Calculator</title>
+  <title>Police OT Calc</title>
   <style>
-    :root{--bg:#f2f2f7;--card:#fff;--primary:#0a84ff;--text:#111;--muted:#8e8e93}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-    .card{max-width:440px;margin:16px auto;padding:20px;background:var(--card);border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.08)}
-    h1{text-align:center;margin:0 0 12px}
-    label{font-weight:600;font-size:.9rem;margin-top:12px;display:block}
-    select,input,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem}
-    button{background:var(--primary);color:#fff;border:none;font-weight:600;margin-top:16px}
-    .result{margin-top:16px;background:#f5f5f7;padding:14px;border-radius:14px}
-    .row{display:flex;justify-content:space-between;margin:6px 0}
+    :root{--bg:#f2f2f7;--card:#ffffff;--primary:#0a84ff;--text:#111;--muted:#8e8e93;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial;background:var(--bg);margin:0;padding:16px;color:var(--text);}    
+    .card{background:var(--card);max-width:430px;margin:0 auto 16px;padding:20px;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.08);}    
+    h1,h2{text-align:center;margin:8px 0;}
+    label{display:block;margin-top:12px;font-weight:600;font-size:.9rem;}
+    select,input,button{width:100%;padding:12px;margin-top:6px;border-radius:12px;border:1px solid #ddd;font-size:1rem;}
+    button{background:var(--primary);color:#fff;border:none;margin-top:12px;font-weight:600;}
+    .row{display:flex;justify-content:space-between;margin:6px 0;font-size:.95rem;}
+    .result{margin-top:16px;background:#f5f5f7;padding:12px;border-radius:14px;}
+    .entry{background:#fff;padding:10px;border-radius:12px;margin-top:8px;}
   </style>
 </head>
 <body>
@@ -21,13 +22,10 @@
 <div class="card">
   <h1>Police OT</h1>
 
-  <label>Warrant Number</label>
-  <input id="warrant" placeholder="e.g. 123456">
-
   <label>Force</label>
   <select id="force">
     <option value="met">Metropolitan Police</option>
-    <option value="other">Other Home Office Force</option>
+    <option value="other">Other HO Force</option>
   </select>
 
   <label>Rank</label>
@@ -36,11 +34,14 @@
   <label>Pay Point</label>
   <select id="payPoint"></select>
 
+  <label>Warrant Number</label>
+  <input id="warrant" placeholder="e.g. 123456" />
+
   <label>Date</label>
-  <input type="date" id="otDate">
+  <input type="date" id="otDate" />
 
   <label>Hours Worked</label>
-  <input type="number" id="hours" value="9" min="0" step="0.25">
+  <input type="number" id="hours" value="9" min="0" />
 
   <label>Overtime Type</label>
   <select id="otType">
@@ -57,87 +58,95 @@
     <div class="row"><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
   </div>
 
-  <button id="saveOt">Save Overtime</button>
+  <button id="save">Save Overtime</button>
+</div>
+
+<div class="card">
+  <h2>Overtime Log</h2>
+  <select id="viewMode">
+    <option value="day">By Day</option>
+    <option value="week">By Week</option>
+    <option value="month">By Month</option>
+    <option value="year">By Year</option>
+  </select>
+  <div id="log"></div>
 </div>
 
 <script>
-/* ===== PAY DATA (2024/25 + LONDON WEIGHTING) ===== */
 const WEEKLY_HOURS = 40;
-const LONDON_WEIGHTING = 7377; // included for Met
+const STORE_KEY = 'police_ot_entries';
 
 const PAY = {
-  met: {
-    weighting: LONDON_WEIGHTING,
-    PC: {1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},
-    PS: {2:53568,3:54660,4:56208}
+  met:{
+    pc:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},
+    ps:{2:53568,3:54660,4:56208}
   },
-  other: {
-    weighting: 0,
-    PC: {1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},
-    PS: {2:53568,3:54660,4:56208}
+  other:{
+    pc:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},
+    ps:{2:53568,3:54660,4:56208}
   }
 };
 
-/* ===== ELEMENTS ===== */
-const forceEl = document.getElementById('force');
-const rankEl = document.getElementById('rank');
-const payPointEl = document.getElementById('payPoint');
-const hoursEl = document.getElementById('hours');
-const otTypeEl = document.getElementById('otType');
+const forceEl=force, rankEl=rank, pointEl=payPoint, hoursEl=hours, otTypeEl=otType;
+const baseEl=base, otEl=ot, grossEl=gross, deductionsEl=deductions, netEl=net;
 
-const baseEl = document.getElementById('base');
-const otEl = document.getElementById('ot');
-const grossEl = document.getElementById('gross');
-const deductionsEl = document.getElementById('deductions');
-const netEl = document.getElementById('net');
-
-/* ===== LOADERS ===== */
 function loadRanks(){
   rankEl.innerHTML='';
-  ['PC','PS'].forEach(r=>rankEl.add(new Option(r,r)));
+  ['pc','ps'].forEach(r=>rankEl.add(new Option(r.toUpperCase(),r)));
   loadPayPoints();
 }
 
 function loadPayPoints(){
-  payPointEl.innerHTML='';
-  const points = PAY[forceEl.value][rankEl.value];
-  Object.keys(points).forEach(p=>payPointEl.add(new Option(p,p)));
+  pointEl.innerHTML='';
+  Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.add(new Option(p,p)));
   calculate();
 }
 
-/* ===== CALCULATION ===== */
 function calculate(){
-  const force = PAY[forceEl.value];
-  const salary = force[rankEl.value][payPointEl.value];
-  if(!salary) return;
-
-  const annual = salary + force.weighting;
-  const base = annual / 52 / WEEKLY_HOURS;
+  const annual = PAY[forceEl.value][rankEl.value][pointEl.value];
+  if(!annual) return;
+  const base = annual/52/WEEKLY_HOURS;
   const otRate = base * Number(otTypeEl.value);
   const hrs = Number(hoursEl.value)||0;
   const gross = otRate * hrs;
-
   const higher = annual > 50270;
-  const tax = higher ? 0.4 : 0.2;
-  const ni = higher ? 0.02 : 0.08;
-  const deductions = gross * (tax + ni);
-
+  const ded = gross * ((higher?0.4:0.2)+(higher?0.02:0.08));
+  const net = gross - ded;
   baseEl.textContent = base.toFixed(2);
   otEl.textContent = otRate.toFixed(2);
   grossEl.textContent = gross.toFixed(2);
-  deductionsEl.textContent = deductions.toFixed(2);
-  netEl.textContent = (gross - deductions).toFixed(2);
+  deductionsEl.textContent = ded.toFixed(2);
+  netEl.textContent = net.toFixed(2);
 }
 
-/* ===== INIT ===== */
-document.getElementById('otDate').valueAsDate = new Date();
-forceEl.onchange = loadRanks;
-rankEl.onchange = loadPayPoints;
-payPointEl.onchange = calculate;
-hoursEl.oninput = calculate;
-otTypeEl.onchange = calculate;
+function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
+function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-loadRanks();
+save.onclick=()=>{
+  const entries=getEntries();
+  entries.push({
+    date: otDate.value,
+    hours: Number(hoursEl.value),
+    net: Number(netEl.textContent)
+  });
+  setEntries(entries);
+  renderLog();
+};
+
+function renderLog(){
+  log.innerHTML='';
+  getEntries().forEach(e=>{
+    log.innerHTML+=`<div class='entry'>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</div>`;
+  });
+}
+
+force.onchange=loadRanks;
+rank.onchange=loadPayPoints;
+payPoint.onchange=calculate;
+hours.oninput=calculate;
+otType.onchange=calculate;
+
+window.onload=()=>{otDate.valueAsDate=new Date();loadRanks();renderLog();};
 </script>
 </body>
 </html>
