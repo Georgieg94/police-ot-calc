@@ -23,7 +23,6 @@
 <div id="lockScreen" style="display:none;">
   <div id="lockBox">
     <h2>Police OT Calc</h2>
-    <p id="lockMsg">Unlock</p>
     <input type="password" id="pinInput" maxlength="4" inputmode="numeric" />
     <button id="unlockBtn">Unlock</button>
   </div>
@@ -61,10 +60,8 @@
 <button id="saveOt">Save Overtime</button>
 <button id="exportCal">Add OT to Calendar</button>
 <button id="exportPdf">Export PDF Claim</button>
-<button id="backupBtn">Encrypted Backup</button>
-<button id="restoreBtn">Restore Backup</button>
 
-<label>Attach Receipt (optional)</label>
+<label>Attach Receipt</label>
 <input type="file" id="receipt" accept="image/*">
 
 <div class="result">
@@ -75,87 +72,142 @@
 </div>
 
 <script>
-/* ===== SECURITY (PIN / BIOMETRIC OPTIONAL) ===== */
-const PIN_KEY='police_ot_pin';
-const BIOMETRIC_KEY='police_ot_bio';
-const LOCK_TIMEOUT=60000;
+// ===== SECURITY =====
+const PIN_KEY = 'police_ot_pin';
+const LOCK_TIMEOUT = 60000;
 let lockTimer;
 
-function requirePin(){lockScreen.style.display='flex';app.style.display='none';}
-function unlock(){lockScreen.style.display='none';app.style.display='block';resetLockTimer();}
-function resetLockTimer(){clearTimeout(lockTimer);lockTimer=setTimeout(requirePin,LOCK_TIMEOUT);}
+const lockScreen = document.getElementById('lockScreen');
+const app = document.getElementById('app');
+const pinInput = document.getElementById('pinInput');
+const unlockBtn = document.getElementById('unlockBtn');
 
-async function tryBiometric(){if(!window.PublicKeyCredential)return false;try{await navigator.credentials.get({publicKey:{challenge:new Uint8Array(16),timeout:60000,userVerification:'required'}});return true;}catch{return false;}}
+function lockApp(){ lockScreen.style.display='flex'; app.style.display='none'; }
+function unlockApp(){ lockScreen.style.display='none'; app.style.display='block'; resetTimer(); }
+function resetTimer(){ clearTimeout(lockTimer); lockTimer=setTimeout(lockApp,LOCK_TIMEOUT); }
 
 if(!localStorage.getItem(PIN_KEY)){
-  const pin=prompt('Set a 4-digit PIN');
+  const pin = prompt('Set a 4-digit PIN');
   if(pin) localStorage.setItem(PIN_KEY,pin);
 }
 
-requirePin();
-
-unlockBtn.onclick=async()=>{
-  if(localStorage.getItem(BIOMETRIC_KEY)==='on'){
-    if(await tryBiometric()) return unlock();
-  }
-  if(pinInput.value===localStorage.getItem(PIN_KEY)) unlock(); else alert('Incorrect PIN');
+unlockBtn.onclick = () => {
+  if(pinInput.value === localStorage.getItem(PIN_KEY)) unlockApp();
+  else alert('Incorrect PIN');
 };
 
-['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,resetLockTimer));
+['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,resetTimer));
+lockApp();
 
-/* ===== CORE APP ===== */
-const WEEKLY_HOURS=40;
-const STORE_KEY='police_ot_entries';
+// ===== CORE =====
+const WEEKLY_HOURS = 40;
+const STORE_KEY = 'police_ot_entries';
 
-const PAY={
+const PAY = {
   met:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}},
   other:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}}
 };
 
-const forceEl=force,rankEl=rank,pointEl=payPoint,hoursEl=hours,otTypeEl=otType;
-const baseEl=base,otEl=ot,grossEl=gross,deductionsEl=deductions,netEl=net;
+const forceEl = document.getElementById('force');
+const rankEl = document.getElementById('rank');
+const pointEl = document.getElementById('payPoint');
+const hoursEl = document.getElementById('hours');
+const otTypeEl = document.getElementById('otType');
 
-function loadRanks(){rankEl.innerHTML='';Object.keys(PAY[forceEl.value]).forEach(r=>rankEl.innerHTML+=`<option>${r}</option>`);loadPayPoints();}
-function loadPayPoints(){pointEl.innerHTML='';Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.innerHTML+=`<option value="${p}">${p}</option>`);calculate();}
+const baseEl = document.getElementById('base');
+const otEl = document.getElementById('ot');
+const grossEl = document.getElementById('gross');
+const deductionsEl = document.getElementById('deductions');
+const netEl = document.getElementById('net');
 
-function calculate(){const annual=PAY[forceEl.value][rankEl.value][pointEl.value];if(!annual)return;const base=annual/52/WEEKLY_HOURS;const otRate=base*Number(otTypeEl.value);const hrs=Number(hoursEl.value)||0;const gross=otRate*hrs;const higher=annual>50270;const ded=gross*((higher?0.4:0.2)+(higher?0.02:0.08));const net=gross-ded;baseEl.textContent=base.toFixed(2);otEl.textContent=otRate.toFixed(2);grossEl.textContent=gross.toFixed(2);deductionsEl.textContent=ded.toFixed(2);netEl.textContent=net.toFixed(2);}  
+function loadRanks(){
+  rankEl.innerHTML='';
+  Object.keys(PAY[forceEl.value]).forEach(r=>rankEl.add(new Option(r,r)));
+  loadPayPoints();
+}
 
-function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
-function saveEntry(e){const a=getEntries();a.push(e);localStorage.setItem(STORE_KEY,JSON.stringify(a));}
+function loadPayPoints(){
+  pointEl.innerHTML='';
+  Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.add(new Option(p,p)));
+  calculate();
+}
 
-function fileToBase64(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});}
+function calculate(){
+  const annual = PAY[forceEl.value][rankEl.value][pointEl.value];
+  if(!annual) return;
+  const base = annual/52/WEEKLY_HOURS;
+  const otRate = base*Number(otTypeEl.value);
+  const hrs = Number(hoursEl.value)||0;
+  const gross = otRate*hrs;
+  const higher = annual>50270;
+  const deductions = gross*((higher?0.4:0.2)+(higher?0.02:0.08));
+  const net = gross-deductions;
+  baseEl.textContent=base.toFixed(2);
+  otEl.textContent=otRate.toFixed(2);
+  grossEl.textContent=gross.toFixed(2);
+  deductionsEl.textContent=deductions.toFixed(2);
+  netEl.textContent=net.toFixed(2);
+}
 
-function exportToCalendar(){const entries=getEntries();if(!entries.length)return alert('No overtime to export');let ics='BEGIN:VCALENDAR\nVERSION:2.0\n';entries.forEach(e=>{const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];ics+=`BEGIN:VEVENT\nDTSTART:${d}\nSUMMARY:Police Overtime (${e.hours}h)\nDESCRIPTION:Net £${e.net}\nEND:VEVENT\n`;});ics+='END:VCALENDAR';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='police-overtime.ics';a.click();}
+function getEntries(){ return JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); }
+function saveEntry(e){ const a=getEntries(); a.push(e); localStorage.setItem(STORE_KEY,JSON.stringify(a)); }
 
-function renderCalendarView(){calendarList.innerHTML='';const mode=viewMode.value;const grouped={};getEntries().forEach(e=>{const d=new Date(e.date);const key=mode==='day'?d.toLocaleDateString():mode==='week'?`Week of ${d.toLocaleDateString()}`:d.toLocaleString('default',{month:'long',year:'numeric'});grouped[key]??={h:0,n:0,receipts:[]};grouped[key].h+=e.hours;grouped[key].n+=e.net;if(e.receipt)grouped[key].receipts.push(e.receipt);});Object.keys(grouped).forEach(k=>{calendarList.innerHTML+=`<div class='row'><span>${k} • ${grouped[k].h}h</span><strong>£${grouped[k].n.toFixed(2)}</strong></div>`;grouped[k].receipts.forEach(r=>calendarList.innerHTML+=`<img class='thumb' src='${r}'>`);});}
+function fileToBase64(file){ return new Promise(res=>{const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(file);}); }
 
-saveOt.onclick=async()=>{if(!Number(grossEl.textContent))return alert('Nothing to save');let receiptData=null;if(receipt.files[0])receiptData=await fileToBase64(receipt.files[0]);saveEntry({date:otDate.value,hours:Number(hours.value),net:Number(netEl.textContent),receipt:receiptData});renderCalendarView();alert('Saved');};
-exportCal.onclick=exportToCalendar;
-viewMode.onchange=renderCalendarView;
+function renderCalendarView(){
+  const list = document.getElementById('calendarList');
+  const mode = document.getElementById('viewMode').value;
+  list.innerHTML='';
+  const grouped={};
+  getEntries().forEach(e=>{
+    const d=new Date(e.date);
+    const key = mode==='day'?d.toLocaleDateString():mode==='week'?`Week of ${d.toLocaleDateString()}`:d.toLocaleString('default',{month:'long',year:'numeric'});
+    grouped[key]??={h:0,n:0};
+    grouped[key].h+=e.hours; grouped[key].n+=e.net;
+  });
+  Object.keys(grouped).forEach(k=>list.innerHTML+=`<div class='row'><span>${k} • ${grouped[k].h}h</span><strong>£${grouped[k].n.toFixed(2)}</strong></div>`);
+}
 
-/* ===== PDF EXPORT (SUMMARY + RECEIPTS) ===== */
-exportPdf.onclick=()=>{
+// ===== EVENTS =====
+forceEl.onchange = loadRanks;
+rankEl.onchange = loadPayPoints;
+payPoint.onchange = calculate;
+hoursEl.oninput = calculate;
+otTypeEl.onchange = calculate;
+
+saveOt.onclick = async()=>{
+  if(!Number(grossEl.textContent)) return alert('Nothing to save');
+  let receiptData=null;
+  if(receipt.files[0]) receiptData=await fileToBase64(receipt.files[0]);
+  saveEntry({date:otDate.value,hours:Number(hoursEl.value),net:Number(netEl.textContent),receipt:receiptData});
+  renderCalendarView();
+};
+
+exportCal.onclick = ()=>{
+  const entries=getEntries();
+  if(!entries.length) return alert('No overtime');
+  let ics='BEGIN:VCALENDAR\nVERSION:2.0\n';
+  entries.forEach(e=>{
+    const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];
+    ics+=`BEGIN:VEVENT\nDTSTART:${d}\nSUMMARY:Police OT (${e.hours}h)\nEND:VEVENT\n`;
+  });
+  ics+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  a.download='police-overtime.ics';
+  a.click();
+};
+
+exportPdf.onclick = ()=>{
   const w=window.open('','_blank');
-  w.document.write('<h2>Police OT Claim</h2>');
   let total=0;
-  getEntries().forEach(e=>{total+=e.net;w.document.write(`<p>${e.date} — ${e.hours}h — £${e.net.toFixed(2)}</p>`);if(e.receipt)w.document.write(`<img src='${e.receipt}' style='width:300px;'>`);});
+  w.document.write('<h2>Police OT Claim</h2>');
+  getEntries().forEach(e=>{ total+=e.net; w.document.write(`<p>${e.date} — ${e.hours}h — £${e.net.toFixed(2)}</p>`); if(e.receipt) w.document.write(`<img src='${e.receipt}' width='300'>`); });
   w.document.write(`<h3>Total £${total.toFixed(2)}</h3>`);
   w.print();
 };
 
-/* ===== ENCRYPTED BACKUP (MANUAL FILE) ===== */
-backupBtn.onclick=()=>{
-  const data=btoa(JSON.stringify(getEntries()));
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([data]));
-  a.download='police-ot-backup.otbackup';a.click();
-};
-
-restoreBtn.onclick=()=>{
-  const i=document.createElement('input');i.type='file';i.onchange=e=>{const r=new FileReader();r.onload=()=>{localStorage.setItem(STORE_KEY,atob(r.result));renderCalendarView();alert('Restored');};r.readAsText(i.files[0]);};i.click();
-};
-
-window.onload=()=>{otDate.valueAsDate=new Date();loadRanks();renderCalendarView();};
+window.onload = ()=>{ otDate.valueAsDate=new Date(); loadRanks(); renderCalendarView(); };
 </script>
 </body>
 </html>
