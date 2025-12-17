@@ -83,7 +83,13 @@
       <div><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
       <div><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
       <div><span>Tax & NI</span><strong>-£<span id="deductions">0.00</span></strong></div>
-      <div><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
+      <div><span>Net Pay</span><strong>£<span id="net">0.00</span></strong>    <button id="saveOt" style="margin-top:12px;width:100%;padding:12px;border-radius:10px;border:none;background:#1e3a8a;color:#fff;font-size:1rem">Save Overtime</button>
+
+    <div class="result" style="margin-top:16px">
+      <h3 style="margin:0 0 8px 0">This Month</h3>
+      <div><span>Total Hours</span><strong><span id="mHours">0</span></strong></div>
+      <div><span>Gross</span><strong>£<span id="mGross">0.00</span></strong></div>
+      <div><span>Net</span><strong>£<span id="mNet">0.00</span></strong></div>
     </div>
   </div>
 
@@ -189,9 +195,69 @@ function calculate() {
   document.getElementById('net').textContent = net.toFixed(2);
 }
 
+// ---- STORAGE ----
+const STORE_KEY = 'police_ot_entries';
+
+function getEntries() {
+  return JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+}
+
+function saveEntry(entry) {
+  const entries = getEntries();
+  entries.push(entry);
+  localStorage.setItem(STORE_KEY, JSON.stringify(entries));
+}
+
+function refreshMonthTotals() {
+  const entries = getEntries();
+  const now = new Date();
+
+  let h = 0, g = 0, n = 0;
+  entries.forEach(e => {
+    const d = new Date(e.date);
+    if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+      h += e.hours;
+      g += e.gross;
+      n += e.net;
+    }
+  });
+
+  document.getElementById('mHours').textContent = h.toFixed(1);
+  document.getElementById('mGross').textContent = g.toFixed(2);
+  document.getElementById('mNet').textContent = n.toFixed(2);
+}
+
 // ---- INIT & EVENTS ----
 document.addEventListener('DOMContentLoaded', () => {
   loadRanks();
+  refreshMonthTotals();
+
+  forceEl.addEventListener('change', loadRanks);
+  rankEl.addEventListener('change', loadPayPoints);
+  pointEl.addEventListener('change', calculate);
+  hoursEl.addEventListener('input', calculate);
+  otTypeEl.addEventListener('change', calculate);
+
+  document.getElementById('saveOt').addEventListener('click', () => {
+    const gross = parseFloat(document.getElementById('gross').textContent);
+    const net = parseFloat(document.getElementById('net').textContent);
+    if (!gross) return alert('Nothing to save');
+
+    saveEntry({
+      date: new Date().toISOString(),
+      force: forceEl.value,
+      rank: rankEl.value,
+      payPoint: Number(pointEl.value),
+      hours: parseFloat(hoursEl.value),
+      otType: otTypeEl.value,
+      gross,
+      net
+    });
+
+    refreshMonthTotals();
+    alert('Overtime saved');
+  });
+});
 
   forceEl.addEventListener('change', loadRanks);
   rankEl.addEventListener('change', loadPayPoints);
