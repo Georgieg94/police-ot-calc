@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Police Overtime Calculator</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav>
+  <button id="tabCalc" class="active">Calc</button>
+  <button id="tabLog">Log</button>
+  <button id="tabSettings">Settings</button>
+</nav>
+
+<div class="card" id="screen-calc">
+  <h1>Police OT</h1>
+
+  <div class="field">
+    <label>Force</label>
+    <select id="force">
+      <option value="met">Metropolitan Police</option>
+      <option value="other">Other Home Office Force</option>
+    </select>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label>Rank</label>
+      <select id="rank"></select>
+    </div>
+    <div class="field">
+      <label>Pay Point</label>
+      <select id="point"></select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Warrant Number</label>
+    <input type="text" id="warrant" placeholder="e.g. 123456">
+  </div>
+
+  <div class="field">
+    <label>Date</label>
+    <input type="date" id="date">
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label>Start Time</label>
+      <input type="time" id="startTime">
+    </div>
+    <div class="field">
+      <label>Finish Time</label>
+      <input type="time" id="finishTime">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Hours (auto)</label>
+    <input type="number" id="hours" readonly>
+  </div>
+
+  <div class="field">
+    <label>Overtime Type</label>
+    <select id="otType">
+      <option value="1.3333">Standard (1⅓)</option>
+      <option value="1.5">Rest Day (1½)</option>
+      <option value="2">Cancelled RD (Double)</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Attach Receipt</label>
+    <input type="file" id="receipt" accept="image/*">
+    <img id="receiptPreview" style="max-width:100px; max-height:100px; display:none; margin-top:8px; border-radius:8px;">
+  </div>
+
+  <div class="result">
+    <div class="row"><span>Base hourly</span><strong>£<span id="base">0.00</span></strong></div>
+    <div class="row"><span>OT hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+    <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+    <div class="row"><span>Tax & NI</span><strong>£<span id="ded">0.00</span></strong></div>
+    <div class="row"><span>Net</span><strong>£<span id="net">0.00</span></strong></div>
+  </div>
+
+  <button id="save">Save Overtime</button>
+  <button id="exportPdf" class="secondary">Export Claim PDF</button>
+  <button id="exportCal" class="secondary">Export to Calendar</button>
+</div>
+
+<div class="card" id="screen-log" style="display:none">
+  <h2>Overtime Log</h2>
+  <div id="log"></div>
+</div>
+
+<div class="card" id="screen-settings" style="display:none">
+  <h2>Settings</h2>
+  <button class="danger" id="clearData">Clear All Data</button>
+</div>
+
+<script src="script.js"></script>
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('service-worker.js');
+}
+</script>
+</body>
+</html>
