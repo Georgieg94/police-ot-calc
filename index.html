@@ -3,53 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Police Overtime Calculator</title>
+<title>Police OT</title>
+
+<link rel="manifest" href="manifest.json">
 
 <style>
-body{
-  font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;
-  margin:0;background:#f2f2f7
-}
-.card{
-  max-width:430px;
-  margin:72px auto 24px;
-  background:#fff;
-  border-radius:16px;
-  padding:16px;
-  box-shadow:0 10px 25px rgba(0,0,0,.08)
-}
-h1,h2{text-align:center;margin:8px 0}
-label{font-weight:600;font-size:.9rem;margin-bottom:4px;display:block}
-input,select,button{
-  width:100%;padding:10px;border-radius:10px;
-  border:1px solid #ddd;font-size:.95rem;box-sizing:border-box
-}
-button{
-  background:#003a8f;color:#fff;border:none;
-  font-weight:700;margin-top:12px
-}
-button.danger{background:#ff3b30}
-.row{display:flex;justify-content:space-between;margin:6px 0}
-.result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
-.entry{background:#fff;border-radius:12px;padding:10px;margin-top:8px}
-.field{display:flex;flex-direction:column;margin-top:10px}
-.field-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.field-row .field{flex:1;margin-top:0}
-
-nav{
-  position:fixed;top:0;left:0;right:0;
-  background:#003a8f;display:flex;z-index:1000
-}
-nav button{
-  flex:1;border-radius:0;background:#003a8f;
-  color:#fff;font-weight:700;padding:14px;border:none
-}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;background:#f2f2f7}
+nav{position:fixed;top:0;left:0;right:0;background:#003a8f;display:flex;z-index:1000}
+nav button{flex:1;padding:14px;border:none;font-weight:700;background:#003a8f;color:#fff}
 nav button.active{background:#fff;color:#003a8f}
 
-@media(max-width:380px){
-  input,select{font-size:.9rem;padding:8px}
-  .card{padding:12px}
-}
+.card{max-width:430px;margin:80px auto 24px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+h1,h2{text-align:center;margin:8px 0}
+label{font-weight:600;font-size:.9rem;margin-bottom:4px;display:block}
+input,select,button{width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;box-sizing:border-box}
+button.primary{background:#003a8f;color:#fff;border:none;font-weight:700;margin-top:12px}
+.row{display:flex;justify-content:space-between;margin:6px 0}
+.result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
+.field{margin-top:10px}
+.field-row{display:flex;gap:8px}
+.entry{background:#fff;padding:10px;border-radius:12px;margin-top:8px}
 </style>
 </head>
 
@@ -68,7 +41,7 @@ nav button.active{background:#fff;color:#003a8f}
 <label>Force</label>
 <select id="force">
   <option value="met">Metropolitan Police</option>
-  <option value="other">Other Home Office Force</option>
+  <option value="other">Other Force</option>
 </select>
 </div>
 
@@ -85,7 +58,7 @@ nav button.active{background:#fff;color:#003a8f}
 
 <div class="field">
 <label>Warrant Number</label>
-<input id="warrant" placeholder="e.g. 123456">
+<input id="warrant">
 </div>
 
 <div class="field">
@@ -95,11 +68,11 @@ nav button.active{background:#fff;color:#003a8f}
 
 <div class="field-row">
 <div class="field">
-<label>Start Time</label>
+<label>Start</label>
 <input type="time" id="startTime">
 </div>
 <div class="field">
-<label>Finish Time</label>
+<label>Finish</label>
 <input type="time" id="finishTime">
 </div>
 </div>
@@ -114,26 +87,26 @@ nav button.active{background:#fff;color:#003a8f}
 <select id="otType">
 <option value="1.3333">Standard (1⅓)</option>
 <option value="1.5">Rest Day (1½)</option>
-<option value="2">Cancelled RD (Double)</option>
+<option value="2">Cancelled RD</option>
 </select>
 </div>
 
 <div class="field">
 <label>Attach Receipt</label>
-<input type="file" accept="image/*" capture="environment">
+<input type="file" id="receipt" accept="image/*">
 </div>
 
 <div class="result">
-<div class="row"><span>Base hourly</span><strong>£<span id="base">0.00</span></strong></div>
-<div class="row"><span>OT hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+<div class="row"><span>Base</span><strong>£<span id="base">0.00</span></strong></div>
+<div class="row"><span>OT</span><strong>£<span id="ot">0.00</span></strong></div>
 <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
 <div class="row"><span>Tax & NI</span><strong>£<span id="ded">0.00</span></strong></div>
 <div class="row"><span>Net</span><strong>£<span id="net">0.00</span></strong></div>
 </div>
 
-<button id="save">Save Overtime</button>
-<button id="exportPdf">Export Claim PDF</button>
-<button id="exportCal">Export to Calendar</button>
+<button class="primary" id="save">Save Overtime</button>
+<button class="primary" id="exportPdf">Export Claim PDF</button>
+<button class="primary" id="exportCal">Export to Calendar</button>
 </div>
 
 <div class="card" id="screen-log" style="display:none">
@@ -143,89 +116,14 @@ nav button.active{background:#fff;color:#003a8f}
 
 <div class="card" id="screen-settings" style="display:none">
 <h2>Settings</h2>
-<button class="danger" id="clearData">Clear All Data</button>
+<button class="primary" id="clearData">Clear All Data</button>
 </div>
 
+<script src="store.js"></script>
+<script src="export.js"></script>
+<script src="app.js"></script>
 <script>
-const WEEKLY_HOURS=40;
-const STORE_KEY='police_ot_entries';
-
-const PAY={
-  met:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},
-       PS:{2:53568,3:54660,4:56208}},
-  other:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},
-         PS:{2:53568,3:54660,4:56208}}
-};
-
-const force=forceEl=document.getElementById('force');
-const rank=document.getElementById('rank');
-const point=document.getElementById('point');
-const startTime=document.getElementById('startTime');
-const finishTime=document.getElementById('finishTime');
-const hours=document.getElementById('hours');
-const otType=document.getElementById('otType');
-const dateEl=document.getElementById('date');
-const baseEl=document.getElementById('base');
-const otEl=document.getElementById('ot');
-const grossEl=document.getElementById('gross');
-const dedEl=document.getElementById('ded');
-const netEl=document.getElementById('net');
-const saveBtn=document.getElementById('save');
-const logEl=document.getElementById('log');
-
-function loadRanks(){
-  rank.innerHTML='';
-  Object.keys(PAY[force.value]).forEach(r=>rank.add(new Option(r,r)));
-  loadPoints();
-}
-function loadPoints(){
-  point.innerHTML='';
-  Object.keys(PAY[force.value][rank.value]).forEach(p=>point.add(new Option(p,p)));
-  calculate();
-}
-function calculate(){
-  if(startTime.value&&finishTime.value){
-    let [sh,sm]=startTime.value.split(':').map(Number);
-    let [fh,fm]=finishTime.value.split(':').map(Number);
-    let diff=(fh+fm/60)-(sh+sm/60); if(diff<0) diff+=24;
-    hours.value=diff.toFixed(2);
-  }
-  const annual=PAY[force.value][rank.value][point.value];
-  if(!annual) return;
-  const base=annual/52/WEEKLY_HOURS;
-  const ot=base*Number(otType.value);
-  const gross=ot*Number(hours.value||0);
-  const higher=annual>50270;
-  const tax=gross*((higher?0.4:0.2)+(higher?0.02:0.08));
-  baseEl.textContent=base.toFixed(2);
-  otEl.textContent=ot.toFixed(2);
-  grossEl.textContent=gross.toFixed(2);
-  dedEl.textContent=tax.toFixed(2);
-  netEl.textContent=(gross-tax).toFixed(2);
-}
-function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
-function saveEntry(e){const a=getEntries();a.push(e);localStorage.setItem(STORE_KEY,JSON.stringify(a));}
-function renderLog(){
-  logEl.innerHTML='';
-  getEntries().forEach(e=>{
-    logEl.innerHTML+=`<div class="entry">${e.date} • ${e.rank} PP${e.point} • ${e.hours}h • £${e.net}</div>`;
-  });
-}
-
-saveBtn.onclick=()=>{
-  saveEntry({date:dateEl.value,rank:rank.value,point:point.value,hours:hours.value,net:netEl.textContent});
-  renderLog();
-};
-
-force.onchange=loadRanks;
-rank.onchange=loadPoints;
-startTime.onchange=calculate;
-finishTime.onchange=calculate;
-otType.onchange=calculate;
-
-dateEl.valueAsDate=new Date();
-loadRanks();
-renderLog();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')}
 </script>
 </body>
 </html>
