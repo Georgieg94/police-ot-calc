@@ -1,126 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Police Overtime Calculator</title>
-  <style>
-    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;margin:0;background:#f2f2f7}
-    .card{max-width:430px;margin:72px auto 24px;background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
-    h1,h2{margin:8px 0;text-align:center}
-    label{font-weight:600;margin-bottom:4px;display:block;font-size:.9rem}
-    input,select,button{width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;box-sizing:border-box}
-    button{background:#003a8f;color:#fff;border:none;font-weight:700;margin-top:12px}
-    button.secondary{background:#003a8f}
-    button.danger{background:#ff3b30}
-    .row{display:flex;justify-content:space-between;margin:6px 0}
-    .result{background:#f5f5f7;border-radius:12px;padding:12px;margin-top:12px}
-    .entry{background:#fff;border-radius:12px;padding:10px;margin-top:8px}
-    nav{position:fixed;top:0;left:0;right:0;background:#003a8f;display:flex;z-index:1000}
-    nav button{flex:1;border-radius:0;background:#003a8f;color:#fff;font-weight:700;padding:14px 0;border:none}
-    nav button.active{background:#ffffff;color:#003a8f}
-    .field{display:flex;flex-direction:column;margin-top:10px}
-    .field-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-    .field-row .field{flex:1;margin-top:0}
-    @media(max-width:380px){
-      input,select{font-size:.9rem;padding:8px}
-      .card{padding:12px}
-    }
-  </style>
-</head>
-<body>
-
-<nav>
-  <button id="tabCalc" class="active">Calc</button>
-  <button id="tabLog">Log</button>
-  <button id="tabSettings">Settings</button>
-</nav>
-
-<div class="card" id="screen-calc">
-  <h1>Police OT</h1>
-
-  <div class="field">
-    <label>Force</label>
-    <select id="force">
-      <option value="met">Metropolitan Police</option>
-      <option value="other">Other Home Office Force</option>
-    </select>
-  </div>
-
-  <div class="field-row">
-    <div class="field">
-      <label>Rank</label>
-      <select id="rank"></select>
-    </div>
-    <div class="field">
-      <label>Pay Point</label>
-      <select id="point"></select>
-    </div>
-  </div>
-
-  <div class="field">
-    <label>Warrant Number</label>
-    <input type="text" id="warrant" placeholder="e.g. 123456">
-  </div>
-
-  <div class="field">
-    <label>Date</label>
-    <input type="date" id="date">
-  </div>
-
-  <div class="field-row">
-    <div class="field">
-      <label>Start Time</label>
-      <input type="time" id="startTime">
-    </div>
-    <div class="field">
-      <label>Finish Time</label>
-      <input type="time" id="finishTime">
-    </div>
-  </div>
-
-  <div class="field">
-    <label>Hours (auto)</label>
-    <input type="number" id="hours" readonly>
-  </div>
-
-  <div class="field">
-    <label>Overtime Type</label>
-    <select id="otType">
-      <option value="1.3333">Standard (1⅓)</option>
-      <option value="1.5">Rest Day (1½)</option>
-      <option value="2">Cancelled RD (Double)</option>
-    </select>
-  </div>
-
-  <div class="field">
-    <label>Attach Receipt</label>
-    <input type="file" id="receipt" accept="image/*">
-  </div>
-
-  <div class="result">
-    <div class="row"><span>Base hourly</span><strong>£<span id="base">0.00</span></strong></div>
-    <div class="row"><span>OT hourly</span><strong>£<span id="ot">0.00</span></strong></div>
-    <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
-    <div class="row"><span>Tax & NI</span><strong>£<span id="ded">0.00</span></strong></div>
-    <div class="row"><span>Net</span><strong>£<span id="net">0.00</span></strong></div>
-  </div>
-
-  <button id="save">Save Overtime</button>
-  <button id="exportPdf" class="secondary">Export Claim PDF</button>
-  <button id="exportCal" class="secondary">Export to Calendar</button>
-</div>
-
-<div class="card" id="screen-log" style="display:none">
-  <h2>Overtime Log</h2>
-  <div id="log"></div>
-</div>
-
-<div class="card" id="screen-settings" style="display:none">
-  <h2>Settings</h2>
-  <button class="danger" id="clearData">Clear All Data</button>
-</div>
-
 <script>
 const screenCalc=document.getElementById('screen-calc');
 const screenLog=document.getElementById('screen-log');
@@ -189,21 +66,37 @@ function calculate(){
   const higher=annual>50270;
   const taxNI=gross*((higher?0.4:0.2)+(higher?0.02:0.08));
   const net=gross-taxNI;
+
   baseEl.textContent=base.toFixed(2);
   otEl.textContent=ot.toFixed(2);
   grossEl.textContent=gross.toFixed(2);
   dedEl.textContent=taxNI.toFixed(2);
   netEl.textContent=net.toFixed(2);
-  return {hrs,gross,net};
+
+  return {hrs, net};
 }
 
-function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
-function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
+function getEntries(){
+  return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');
+}
+function setEntries(e){
+  localStorage.setItem(STORE_KEY,JSON.stringify(e));
+}
 
 saveBtn.onclick=()=>{
+  if(!dateEl.value) return alert('Please select a date');
   const calc=calculate();
   if(!calc) return;
-  const entry={date:dateEl.value,hours:calc.hrs,net:calc.net,rank:rank.value,point:point.value,warrant:warrant.value};
+
+  const entry={
+    date:dateEl.value,
+    hours:calc.hrs,
+    net:calc.net,
+    rank:rank.value,
+    point:point.value,
+    warrant:warrant.value
+  };
+
   const all=getEntries();
   all.push(entry);
   setEntries(all);
@@ -213,38 +106,54 @@ saveBtn.onclick=()=>{
 function renderLog(){
   log.innerHTML='';
   getEntries().forEach(e=>{
-    log.innerHTML+=`<div class="entry">${e.date} • ${e.rank} PP${e.point} • ${e.hours}h • £${e.net.toFixed(2)}</div>`;
+    log.innerHTML+=
+      `<div class="entry">${e.date} • ${e.rank} PP${e.point} • ${e.hours}h • £${e.net.toFixed(2)}</div>`;
   });
 }
 
+/* ✅ FIXED CALENDAR EXPORT */
 exportCal.onclick=()=>{
   const entries=getEntries();
   if(!entries.length) return alert('No entries to export');
-  let ics='BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Police OT//EN
-';
-  entries.forEach(e=>{
+
+  const now=new Date().toISOString().replace(/[-:]/g,'').split('.')[0];
+
+  let ics=`BEGIN:VCALENDAR\r
+VERSION:2.0\r
+PRODID:-//Police OT//EN\r
+`;
+
+  entries.forEach((e,i)=>{
     if(!e.date) return;
-    const d=new Date(e.date);
-    const dt=d.toISOString().replace(/[-:]/g,'').split('.')[0];
-    ics+=`BEGIN:VEVENT
-DTSTART:${dt}
-SUMMARY:Police OT ${e.hours}h
-END:VEVENT
+    const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];
+
+    ics+=`BEGIN:VEVENT\r
+UID:police-ot-${i}-${d}@local\r
+DTSTAMP:${now}Z\r
+DTSTART;VALUE=DATE:${d.slice(0,8)}\r
+SUMMARY:Police OT ${e.hours}h\r
+END:VEVENT\r
 `;
   });
+
   ics+='END:VCALENDAR';
-  const blob=new Blob([ics],{type:'text/calendar'});
+
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='police-overtime.ics';
   a.click();
+  URL.revokeObjectURL(a.href);
 };
 
 exportPdf.onclick=()=>alert('PDF export coming next drop');
 
-clearData.onclick=()=>{if(confirm('Clear all data?')){localStorage.removeItem(STORE_KEY);renderLog();}};
+clearData.onclick=()=>{
+  if(confirm('Clear all data?')){
+    localStorage.removeItem(STORE_KEY);
+    renderLog();
+  }
+};
 
 function switchScreen(s){
   screenCalc.style.display=s==='calc'?'block':'none';
@@ -269,5 +178,3 @@ dateEl.valueAsDate=new Date();
 loadRanks();
 renderLog();
 </script>
-</body>
-</html>
