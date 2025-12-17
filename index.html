@@ -63,7 +63,11 @@
     <div class="row"><span>Net</span><strong>£<span id="net">0.00</span></strong></div>
   </div>
 
+  <label>Receipt / Attachment</label>
+  <input type="file" id="attachment" accept="image/*" capture="environment">
+
   <button id="save">Save Overtime</button>
+  <button id="exportPdf" class="secondary">Export PDF Claim</button>
 </div>
 
 <div class="card" id="screen-log" style="display:none">
@@ -86,6 +90,16 @@
 <script>
 const WEEKLY_HOURS = 40;
 const STORE_KEY = 'police_ot_entries';
+
+// simple attachment helper
+function fileToBase64(file){
+  return new Promise(res=>{
+    if(!file) return res(null);
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.readAsDataURL(file);
+  });
+}
 
 const PAY = {
   met:{PC:{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},PS:{2:53568,3:54660,4:56208}},
@@ -140,24 +154,40 @@ function calculate(){
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
 function setEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
 
-save.onclick=()=>{
+save.onclick=async()=>{
   const calc = calculate();
   if(!calc) return;
   const all = getEntries();
-  const entry = {date:dateEl.value,hours:calc.hrs,net:calc.net};
+  const attachmentFile = attachment.files[0];
+  const attachmentData = await fileToBase64(attachmentFile);
+
+  const entry = {
+    date: dateEl.value,
+    hours: calc.hrs,
+    net: calc.net,
+    rank: rank.value,
+    point: point.value,
+    force: force.value,
+    attachment: attachmentData
+  };
+
   if(editIndex!==null){all[editIndex]=entry;editIndex=null;} else all.push(entry);
   setEntries(all);
+  attachment.value='';
   renderLog();
 };
 
 function renderLog(){
   log.innerHTML='';
   getEntries().forEach((e,i)=>{
-    log.innerHTML+=`<div class="entry">${e.date} • ${e.hours}h • £${e.net.toFixed(2)}
-    <div class="actions">
-      <button class="secondary" onclick="editEntry(${i})">Edit</button>
-      <button class="danger" onclick="deleteEntry(${i})">Delete</button>
-    </div></div>`;
+    log.innerHTML+=`<div class="entry">
+      ${e.date} • ${e.rank} ${e.point} • ${e.hours}h • £${e.net.toFixed(2)}
+      ${e.attachment?'<div>📎 Attachment saved</div>':''}
+      <div class="actions">
+        <button class="secondary" onclick="editEntry(${i})">Edit</button>
+        <button class="danger" onclick="deleteEntry(${i})">Delete</button>
+      </div>
+    </div>`;
   });
 }
 
