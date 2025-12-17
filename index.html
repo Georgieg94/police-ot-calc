@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Police OT Calc</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      max-width: 420px;
+      width: 100%;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+    select, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    .result {
+      margin-top: 16px;
+      background: #f0f2f5;
+      padding: 12px;
+      border-radius: 10px;
+    }
+    .result div {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Police OT Calc</h1>
+
+    <label>Force</label>
+    <select id="force">
+      <option value="met">Metropolitan Police</option>
+      <option value="other">Other Home Office Force</option>
+    </select>
+
+    <label>Rank</label>
+    <select id="rank"></select>
+
+    <label>Pay Point</label>
+    <select id="payPoint"></select>
+
+    <label>Hours Worked</label>
+    <input type="number" id="hours" value="9" min="0">
+
+    <label>Overtime Type</label>
+    <select id="otType">
+      <option value="1.3333">Standard (1⅓)</option>
+      <option value="1.5">Rest Day (1½)</option>
+      <option value="2">Cancelled RD (Double)</option>
+    </select>
+
+    <div class="result">
+      <div><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
+      <div><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+      <div><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+    </div>
+  </div>
+
+<script>
+// ---- PAY DATA ----
+const WEEKLY_HOURS = 40;
+
+const PAY = {
+  met: {
+    "Police Constable": {
+      1: 31646,
+      2: 32472,
+      3: 33789,
+      4: 35106,
+      5: 37737,
+      6: 43038,
+      7: 50256
+    },
+    "Police Sergeant": {
+      2: 53568,
+      3: 54660,
+      4: 56208
+    }
+  },
+  other: {
+    "Police Constable": {
+      1: 31646,
+      2: 32472,
+      3: 33789,
+      4: 35106,
+      5: 37737,
+      6: 43038,
+      7: 50256
+    },
+    "Police Sergeant": {
+      2: 53568,
+      3: 54660,
+      4: 56208
+    }
+  }
+};
+
+// ---- ELEMENTS ----
+const forceEl = document.getElementById('force');
+const rankEl = document.getElementById('rank');
+const pointEl = document.getElementById('payPoint');
+const hoursEl = document.getElementById('hours');
+const otTypeEl = document.getElementById('otType');
+
+// ---- FUNCTIONS ----
+function loadRanks() {
+  rankEl.innerHTML = '';
+  const ranks = Object.keys(PAY[forceEl.value]);
+  ranks.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    rankEl.appendChild(opt);
+  });
+  loadPayPoints();
+}
+
+function loadPayPoints() {
+  pointEl.innerHTML = '';
+  const points = Object.keys(PAY[forceEl.value][rankEl.value]);
+
+  points.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = Number(p); // ensure numeric
+    opt.textContent = p;
+    pointEl.appendChild(opt);
+  });
+
+  // force selection + recalc
+  pointEl.selectedIndex = 0;
+  calculate();
+});
+  calculate();
+}
+
+function calculate() {
+  if (!rankEl.value || !pointEl.value) return;
+
+  const force = forceEl.value;
+  const rank = rankEl.value;
+  const payPoint = Number(pointEl.value);
+
+  const annual = PAY[force][rank][payPoint];
+  if (!annual) return;
+
+  const base = annual / 52 / WEEKLY_HOURS;
+  const otRate = base * parseFloat(otTypeEl.value);
+  const hours = parseFloat(hoursEl.value) || 0;
+
+  document.getElementById('base').textContent = base.toFixed(2);
+  document.getElementById('ot').textContent = otRate.toFixed(2);
+  document.getElementById('gross').textContent = (otRate * hours).toFixed(2);
+}
+
+// ---- EVENTS ----
+forceEl.addEventListener('change', loadRanks);
+rankEl.addEventListener('change', loadPayPoints);
+hoursEl.addEventListener('input', calculate);
+otTypeEl.addEventListener('change', calculate);
+
+// ---- INIT ----
+loadRanks();
+</script>
+</body>
+</html>
