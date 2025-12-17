@@ -69,6 +69,15 @@
 
 <div class="card">
   <h2>Overtime Log</h2>
+
+  <label>View</label>
+  <select id="viewMode">
+    <option value="day">By Day</option>
+    <option value="week">By Week</option>
+    <option value="month">By Month</option>
+    <option value="year">By Year</option>
+  </select>
+
   <div id="log"></div>
 </div>
 
@@ -140,9 +149,41 @@ save.onclick = async()=>{
 };
 
 function render(){
-  log.innerHTML='';
-  getEntries().forEach((e,i)=>{
-    log.innerHTML += `<div class='entry'>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}${e.receipt?`<br><img class='thumb' src='${e.receipt}'>`:''}<div class='actions'><button class='secondary' onclick='editEntry(${i})'>Edit</button><button class='danger' onclick='deleteEntry(${i})'>Delete</button></div></div>`;
+  const entries = getEntries();
+  log.innerHTML = '';
+
+  const now = new Date();
+  let monthTotal = 0;
+  let yearTotal = 0;
+
+  const groups = {};
+
+  entries.forEach(e => {
+    const d = new Date(e.date);
+    if(d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthTotal += e.net;
+    if(d.getFullYear() === now.getFullYear()) yearTotal += e.net;
+
+    let key;
+    switch(viewMode.value){
+      case 'week':
+        const first = new Date(d.getFullYear(),0,1);
+        key = d.getFullYear() + ' W' + Math.ceil((((d - first) / 86400000) + first.getDay() + 1) / 7);
+        break;
+      case 'month': key = d.toLocaleString('default',{month:'long',year:'numeric'}); break;
+      case 'year': key = d.getFullYear(); break;
+      default: key = e.date;
+    }
+
+    groups[key] = (groups[key] || 0) + e.net;
+  });
+
+  Object.keys(groups).forEach(k => {
+    log.innerHTML += `<div class='entry'><strong>${k}</strong><br>£${groups[k].toFixed(2)}</div>`;
+  });
+
+  monthTotalEl.textContent = monthTotal.toFixed(2);
+  yearTotalEl.textContent = yearTotal.toFixed(2);
+} • ${e.hours}h • £${e.net.toFixed(2)}${e.receipt?`<br><img class='thumb' src='${e.receipt}'>`:''}<div class='actions'><button class='secondary' onclick='editEntry(${i})'>Edit</button><button class='danger' onclick='deleteEntry(${i})'>Delete</button></div></div>`;
   });
 }
 
@@ -161,6 +202,50 @@ function exportPDF(){
 }
 
 exportPdf.onclick = exportPDF;
+
+/* ===== DROP 7: CALENDAR EXPORT (ICS) ===== */
+function exportCalendar(){
+  const entries = getEntries();
+  if(!entries.length){ alert('No overtime to export'); return; }
+
+  let ics = 'BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Police OT//EN
+';
+
+  entries.forEach(e=>{
+    const d = new Date(e.date);
+    const dt = d.toISOString().replace(/[-:]/g,'').split('.')[0];
+    const summary = 'Police Overtime';
+    const desc = `Hours: ${e.hours}\nNet: £${e.net.toFixed(2)}`;
+
+    ics += 'BEGIN:VEVENT
+';
+    ics += `DTSTART:${dt}
+`;
+    ics += `DTEND:${dt}
+`;
+    ics += `SUMMARY:${summary}
+`;
+    ics += `DESCRIPTION:${desc}
+`;
+    ics += 'END:VEVENT
+';
+  });
+
+  ics += 'END:VCALENDAR';
+
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'police-overtime.ics';
+  a.click();
+}
+
+const calBtn = document.createElement('button');
+calBtn.textContent = 'Add OT to Calendar';
+calBtn.onclick = exportCalendar;
+document.querySelector('.card:last-of-type').prepend(calBtn);
 force.onchange=loadRanks;rank.onchange=loadPoints;hours.oninput=calculate;otType.onchange=calculate;
 date.valueAsDate=new Date();loadRanks();render();
 </script>
