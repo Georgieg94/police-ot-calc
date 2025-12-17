@@ -1,106 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Police OT Calc</title>
-
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1e3a8a">
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 16px;
-      display: flex;
-      justify-content: center;
-    }
-    .card {
-      background: #fff;
-      max-width: 420px;
-      width: 100%;
-      padding: 20px;
-      border-radius: 14px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 16px;
-    }
-    label {
-      margin-top: 12px;
-      display: block;
-      font-weight: bold;
-    }
-    select, input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 6px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    .result {
-      margin-top: 16px;
-      background: #f0f2f5;
-      padding: 12px;
-      border-radius: 10px;
-    }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      margin: 6px 0;
-    }
+    body {font-family: Arial, sans-serif;background:#f4f6f8;margin:0;padding:16px;display:flex;justify-content:center;}
+    .card {background:#fff;max-width:420px;width:100%;padding:20px;border-radius:14px;box-shadow:0 8px 20px rgba(0,0,0,0.1);}    
+    h1{text-align:center;font-size:1.4rem;}
+    label{display:block;margin-top:12px;font-weight:bold;}
+    select,input,button{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid #ccc;font-size:1rem;}
+    button{background:#1e3a8a;color:#fff;border:none;margin-top:12px;}
+    .result{margin-top:16px;background:#f0f2f5;padding:12px;border-radius:10px;}
+    .row{display:flex;justify-content:space-between;margin:6px 0;}
+    img.thumb{width:60px;margin:4px;border-radius:6px;}
+    #lockScreen{position:fixed;inset:0;background:#1e3a8a;display:flex;align-items:center;justify-content:center;color:#fff;z-index:9999;}
+    #lockBox{background:#fff;color:#000;padding:20px;border-radius:12px;width:280px;text-align:center;}
   </style>
 </head>
-
 <body>
-  <div class="card">
-    <h1>Police OT Calc</h1>
 
-    <label>Force</label>
-    <select id="force">
-      <option value="met">Metropolitan Police</option>
-      <option value="other">Other Home Office Force</option>
-    </select>
-
-    <label>Rank</label>
-    <select id="rank"></select>
-
-    <label>Pay Point</label>
-    <select id="payPoint"></select>
-
-    <label>Hours Worked</label>
-    <input type="number" id="hours" value="9" min="0" step="0.25">
-
-    <label>Overtime Type</label>
-    <select id="otType">
-      <option value="1.3333">Standard (1⅓)</option>
-      <option value="1.5">Rest Day (1½)</option>
-      <option value="2">Cancelled RD (Double)</option>
-    </select>
-
-    <div class="result">
-      <div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
-      <div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
-      <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
-      <div class="row"><span>Tax & NI</span><strong>-£<span id="deductions">0.00</span></strong></div>
-      <div class="row"><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
-    </div>
+<div id="lockScreen" style="display:none;">
+  <div id="lockBox">
+    <h2>Police OT Calc</h2>
+    <p id="lockMsg">Unlock</p>
+    <input type="password" id="pinInput" maxlength="4" inputmode="numeric" />
+    <button id="unlockBtn">Unlock</button>
   </div>
+</div>
 
-  <!-- MAIN APP LOGIC -->
-  <script src="app.js"></script>
+<div class="card" id="app">
+<h1>Police OT Calc</h1>
 
-  <!-- SERVICE WORKER -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js');
-      });
-    }
-  </script>
+<label>Force</label>
+<select id="force"><option value="met">Metropolitan Police</option><option value="other">Other Home Office Force</option></select>
+
+<label>Rank</label>
+<select id="rank"></select>
+
+<label>Pay Point</label>
+<select id="payPoint"></select>
+
+<label>Date</label>
+<input type="date" id="otDate">
+
+<label>Hours Worked</label>
+<input type="number" id="hours" value="9" min="0">
+
+<label>Overtime Type</label>
+<select id="otType"><option value="1.3333">Standard (1⅓)</option><option value="1.5">Rest Day (1½)</option><option value="2">Cancelled RD (Double)</option></select>
+
+<div class="result">
+  <div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
+  <div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+  <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+  <div class="row"><span>Tax & NI</span><strong>-£<span id="deductions">0.00</span></strong></div>
+  <div class="row"><span>Net Pay</span><strong>£<span id="net">0.00</span></strong></div>
+</div>
+
+<button id="saveOt">Save Overtime</button>
+<button id="exportCal">Add OT to Calendar</button>
+<button id="exportPdf">Export PDF Claim</button>
+<button id="backupBtn">Encrypted Backup</button>
+<button id="restoreBtn">Restore Backup</button>
+
+<label>Attach Receipt (optional)</label>
+<input type="file" id="receipt" accept="image/*">
+
+<div class="result">
+  <h3>Overtime Log</h3>
+  <select id="viewMode"><option value="day">By Day</option><option value="week">By Week</option><option value="month">By Month</option></select>
+  <div id="calendarList"></div>
+</div>
+</div>
+
+<script>
+/* ===== SECURITY (PIN / BIOMETRIC OPTIONAL) ===== */
+const PIN_KEY='police_ot_pin';
+const BIOMETRIC_KEY='police_ot_bio';
+const LOCK_TIMEOUT=60000;
+let lockTimer;
+
+function requirePin(){lockScreen.style.display='flex';app.style.display='none';}
+function unlock(){lockScreen.style.display='none';app.style.display='block';resetLockTimer();}
+function resetLockTimer(){clearTimeout(lockTimer);lockTimer=setTimeout(requirePin,LOCK_TIMEOUT);}
+
+async function tryBiometric(){if(!window.PublicKeyCredential)return false;try{await navigator.credentials.get({publicKey:{challenge:new Uint8Array(16),timeout:60000,userVerification:'required'}});return true;}catch{return false;}}
+
+if(!localStorage.getItem(PIN_KEY)){
+  const pin=prompt('Set a 4-digit PIN');
+  if(pin) localStorage.setItem(PIN_KEY,pin);
+}
+
+requirePin();
+
+unlockBtn.onclick=async()=>{
+  if(localStorage.getItem(BIOMETRIC_KEY)==='on'){
+    if(await tryBiometric()) return unlock();
+  }
+  if(pinInput.value===localStorage.getItem(PIN_KEY)) unlock(); else alert('Incorrect PIN');
+};
+
+['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,resetLockTimer));
+
+/* ===== CORE APP ===== */
+const WEEKLY_HOURS=40;
+const STORE_KEY='police_ot_entries';
+
+const PAY={
+  met:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}},
+  other:{"Police Constable":{1:31646,2:32472,3:33789,4:35106,5:37737,6:43038,7:50256},"Police Sergeant":{2:53568,3:54660,4:56208}}
+};
+
+const forceEl=force,rankEl=rank,pointEl=payPoint,hoursEl=hours,otTypeEl=otType;
+const baseEl=base,otEl=ot,grossEl=gross,deductionsEl=deductions,netEl=net;
+
+function loadRanks(){rankEl.innerHTML='';Object.keys(PAY[forceEl.value]).forEach(r=>rankEl.innerHTML+=`<option>${r}</option>`);loadPayPoints();}
+function loadPayPoints(){pointEl.innerHTML='';Object.keys(PAY[forceEl.value][rankEl.value]).forEach(p=>pointEl.innerHTML+=`<option value="${p}">${p}</option>`);calculate();}
+
+function calculate(){const annual=PAY[forceEl.value][rankEl.value][pointEl.value];if(!annual)return;const base=annual/52/WEEKLY_HOURS;const otRate=base*Number(otTypeEl.value);const hrs=Number(hoursEl.value)||0;const gross=otRate*hrs;const higher=annual>50270;const ded=gross*((higher?0.4:0.2)+(higher?0.02:0.08));const net=gross-ded;baseEl.textContent=base.toFixed(2);otEl.textContent=otRate.toFixed(2);grossEl.textContent=gross.toFixed(2);deductionsEl.textContent=ded.toFixed(2);netEl.textContent=net.toFixed(2);}  
+
+function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
+function saveEntry(e){const a=getEntries();a.push(e);localStorage.setItem(STORE_KEY,JSON.stringify(a));}
+
+function fileToBase64(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(file);});}
+
+function exportToCalendar(){const entries=getEntries();if(!entries.length)return alert('No overtime to export');let ics='BEGIN:VCALENDAR\nVERSION:2.0\n';entries.forEach(e=>{const d=new Date(e.date).toISOString().replace(/[-:]/g,'').split('.')[0];ics+=`BEGIN:VEVENT\nDTSTART:${d}\nSUMMARY:Police Overtime (${e.hours}h)\nDESCRIPTION:Net £${e.net}\nEND:VEVENT\n`;});ics+='END:VCALENDAR';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='police-overtime.ics';a.click();}
+
+function renderCalendarView(){calendarList.innerHTML='';const mode=viewMode.value;const grouped={};getEntries().forEach(e=>{const d=new Date(e.date);const key=mode==='day'?d.toLocaleDateString():mode==='week'?`Week of ${d.toLocaleDateString()}`:d.toLocaleString('default',{month:'long',year:'numeric'});grouped[key]??={h:0,n:0,receipts:[]};grouped[key].h+=e.hours;grouped[key].n+=e.net;if(e.receipt)grouped[key].receipts.push(e.receipt);});Object.keys(grouped).forEach(k=>{calendarList.innerHTML+=`<div class='row'><span>${k} • ${grouped[k].h}h</span><strong>£${grouped[k].n.toFixed(2)}</strong></div>`;grouped[k].receipts.forEach(r=>calendarList.innerHTML+=`<img class='thumb' src='${r}'>`);});}
+
+saveOt.onclick=async()=>{if(!Number(grossEl.textContent))return alert('Nothing to save');let receiptData=null;if(receipt.files[0])receiptData=await fileToBase64(receipt.files[0]);saveEntry({date:otDate.value,hours:Number(hours.value),net:Number(netEl.textContent),receipt:receiptData});renderCalendarView();alert('Saved');};
+exportCal.onclick=exportToCalendar;
+viewMode.onchange=renderCalendarView;
+
+/* ===== PDF EXPORT (SUMMARY + RECEIPTS) ===== */
+exportPdf.onclick=()=>{
+  const w=window.open('','_blank');
+  w.document.write('<h2>Police OT Claim</h2>');
+  let total=0;
+  getEntries().forEach(e=>{total+=e.net;w.document.write(`<p>${e.date} — ${e.hours}h — £${e.net.toFixed(2)}</p>`);if(e.receipt)w.document.write(`<img src='${e.receipt}' style='width:300px;'>`);});
+  w.document.write(`<h3>Total £${total.toFixed(2)}</h3>`);
+  w.print();
+};
+
+/* ===== ENCRYPTED BACKUP (MANUAL FILE) ===== */
+backupBtn.onclick=()=>{
+  const data=btoa(JSON.stringify(getEntries()));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data]));
+  a.download='police-ot-backup.otbackup';a.click();
+};
+
+restoreBtn.onclick=()=>{
+  const i=document.createElement('input');i.type='file';i.onchange=e=>{const r=new FileReader();r.onload=()=>{localStorage.setItem(STORE_KEY,atob(r.result));renderCalendarView();alert('Restored');};r.readAsText(i.files[0]);};i.click();
+};
+
+window.onload=()=>{otDate.valueAsDate=new Date();loadRanks();renderCalendarView();};
+</script>
 </body>
 </html>
