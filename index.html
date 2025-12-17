@@ -62,7 +62,23 @@
 
 <div class="card">
   <h2>Overtime Log</h2>
+
+  <label>View</label>
+  <select id="viewMode">
+    <option value="day">By Day</option>
+    <option value="week">By Week</option>
+    <option value="month">By Month</option>
+    <option value="year">By Year</option>
+  </select>
+
   <div id="log"></div>
+</div>
+
+<div class="card">
+  <h2>Totals</h2>
+  <div class="row"><span>This Month</span><strong>£<span id="monthTotal">0.00</span></strong></div>
+  <div class="row"><span>This Year</span><strong>£<span id="yearTotal">0.00</span></strong></div>
+</div>
 </div>
 
 <script>
@@ -107,8 +123,18 @@ function calculate(){
   const hrs = Number(hours.value) || 0;
   const gross = ot * hrs;
 
+  // Monthly aggregation preview
+  const d = new Date(date.value);
+  const entries = getEntries().filter(e=>{
+    const ed=new Date(e.date);
+    return ed.getMonth()===d.getMonth() && ed.getFullYear()===d.getFullYear();
+  });
+  const monthGross = entries.reduce((s,e)=>s+e.gross, gross);
+
   const higher = annual > 50270;
-  const taxNI = gross * ((higher ? 0.4 : 0.2) + (higher ? 0.02 : 0.08));
+  const taxRate = higher ? 0.4 : 0.2;
+  const niRate  = higher ? 0.02 : 0.08;
+  const taxNI = monthGross * (taxRate + niRate) * (gross / monthGross);
   const net = gross - taxNI;
 
   baseEl.textContent = base.toFixed(2);
@@ -125,6 +151,9 @@ const otEl = document.getElementById('ot');
 const grossEl = document.getElementById('gross');
 const dedEl = document.getElementById('ded');
 const netEl = document.getElementById('net');
+const viewMode = document.getElementById('viewMode');
+const monthTotalEl = document.getElementById('monthTotal');
+const yearTotalEl = document.getElementById('yearTotal');
 
 function getEntries(){return JSON.parse(localStorage.getItem(STORE_KEY)||'[]');}
 function saveEntries(e){localStorage.setItem(STORE_KEY,JSON.stringify(e));}
@@ -137,6 +166,7 @@ save.onclick = ()=>{
   all.push({
     date: date.value,
     hours: Number(hours.value),
+    gross: calc.gross,
     net: calc.net,
     warrant: warrant.value
   });
@@ -146,9 +176,37 @@ save.onclick = ()=>{
 
 function render(){
   log.innerHTML='';
-  getEntries().forEach(e=>{
-    log.innerHTML += `<div class='entry'>${e.date} • ${e.hours}h • £${e.net.toFixed(2)}</div>`;
+  const entries = getEntries();
+  const mode = viewMode.value;
+  const groups = {};
+  const now = new Date();
+  let monthTotal = 0;
+  let yearTotal = 0;
+
+  entries.forEach(e=>{
+    const d = new Date(e.date);
+
+    if(d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()) monthTotal += e.net;
+    if(d.getFullYear()===now.getFullYear()) yearTotal += e.net;
+
+    let key;
+    if(mode==='day') key = d.toLocaleDateString();
+    if(mode==='week') key = 'Week of ' + d.toLocaleDateString();
+    if(mode==='month') key = d.toLocaleString('default',{month:'long',year:'numeric'});
+    if(mode==='year') key = d.getFullYear();
+
+    if(!groups[key]) groups[key] = {hours:0, net:0};
+    groups[key].hours += e.hours;
+    groups[key].net += e.net;
   });
+
+  Object.keys(groups).forEach(k=>{
+    const g = groups[k];
+    log.innerHTML += `<div class='entry'><strong>${k}</strong><br>${g.hours}h • £${g.net.toFixed(2)}</div>`;
+  });
+
+  monthTotalEl.textContent = monthTotal.toFixed(2);
+  yearTotalEl.textContent = yearTotal.toFixed(2);
 }
 
 force.onchange = loadRanks;
