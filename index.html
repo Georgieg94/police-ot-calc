@@ -1,5 +1,3 @@
-Xcode final 18.12
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +5,10 @@ Xcode final 18.12
 <meta name="viewport"
 content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Police OT</title>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+crossorigin="anonymous"></script>
 
 <style>
 :root{--blue:#0a3a8f}
@@ -312,7 +314,6 @@ z-index:5000;
 </div>
 
 <script>
-/* ================= CONFIG ================= */
 const APP_VERSION="1.0.0";
 const LONDON=9738;
 const STORE="policeOT";
@@ -401,45 +402,91 @@ qs("actTotal").textContent=(gross-tax).toFixed(2);
 }
 ["actStart","actFinish","curPoint","actRank","actForce"].forEach(i=>qs(i).onchange=calcActing);
 
-/* LOG */
+/* STORAGE */
 function load(){return JSON.parse(localStorage.getItem(STORE)||"[]")}
 function save(d){localStorage.setItem(STORE,JSON.stringify(d))}
 
+/* SAVE */
 function saveOT(){
 calcOT();
 let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
 let d=load();
-d.push({type:"Overtime",date:qs("otDate").value,hours:qs("otHours").value,total:qs("total").textContent,expense:qs("expense").value,receipt:img});
+d.push({
+type:"Overtime",
+date:qs("otDate").value,
+hours:qs("otHours").value,
+expense:qs("expense").value,
+receipt:img
+});
 save(d);renderLog();show("log");
 }
 
 function saveActing(){
 calcActing();
 let d=load();
-d.push({type:"Acting Up",date:qs("actDate").value,hours:qs("actHours").value,total:qs("actTotal").textContent});
+d.push({
+type:"Acting Up",
+date:qs("actDate").value,
+hours:qs("actHours").value
+});
 save(d);renderLog();show("log");
 }
 
+/* LOG */
 function renderLog(){
 qs("log").innerHTML="";
 load().forEach((e,i)=>{
 qs("log").innerHTML+=`
 <div class="entry">
-<b>${e.type}</b><br>${e.date}<br>${e.hours} hrs<br>Total £${e.total}
+<b>${e.type}</b><br>
+${e.date}<br>
+${e.hours} hrs
 ${e.expense?`<br>Expense £${e.expense}`:""}
 ${e.receipt?`<img src="${e.receipt}">`:""}
 <div class="entry-actions">
+<button onclick="exportClaimPDF(${i})">Export Claim PDF</button>
 <button onclick="del(${i})">Delete</button>
 </div>
 </div>`;
 });
 }
 
-function del(i){let d=load();d.splice(i,1);save(d);renderLog()}
+function del(i){
+let d=load();d.splice(i,1);save(d);renderLog();
+}
+
 function clearAll(){
 localStorage.clear();
 renderLog();
 alert("All data cleared");
+}
+
+/* CLAIMS PDF */
+function exportClaimPDF(i){
+const e=load()[i];
+const { jsPDF } = window.jspdf;
+const pdf=new jsPDF();
+
+let y=20;
+pdf.setFontSize(14);
+pdf.text("Police Overtime Claim",20,y); y+=10;
+
+pdf.setFontSize(10);
+pdf.text(`Type: ${e.type}`,20,y); y+=8;
+pdf.text(`Date: ${e.date}`,20,y); y+=8;
+pdf.text(`Hours: ${e.hours}`,20,y); y+=8;
+
+if(e.expense){
+pdf.text(`Expense: £${e.expense}`,20,y);
+y+=8;
+}
+
+if(e.receipt){
+pdf.text("Receipt:",20,y); y+=5;
+pdf.addImage(e.receipt,"JPEG",20,y,60,60);
+}
+
+pdf.save(`Police_Claim_${e.date}.pdf`);
 }
 
 /* NAV */
@@ -449,8 +496,11 @@ qs("screen-"+s).style.display="block";
 qs("sideMenu").style.left="-260px";
 }
 qs("menuBtn").onclick=()=>{
-qs("sideMenu").style.left=qs("sideMenu").style.left==="0px"?"-260px":"0px";
+qs("sideMenu").style.left=
+qs("sideMenu").style.left==="0px"?"-260px":"0px";
 };
 </script>
+
 </body>
 </html>
+
