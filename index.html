@@ -34,7 +34,11 @@ border-radius:16px;
 padding:16px;
 box-shadow:0 8px 20px rgba(0,0,0,.08);
 }
-.field{margin-top:10px}
+.field.receipt{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+}
 button.primary{
 background:var(--blue);
 color:#fff;
@@ -122,8 +126,6 @@ align-items:center;
 justify-content:center;
 z-index:5000;
 }
-<style>
-  /* your existing CSS above */
 
   /* ================= UNIFIED BUTTON STYLE ================= */
 
@@ -252,6 +254,32 @@ select:focus{
   justify-content:center;
   z-index:2001;
 }
+
+    /* ================= REMOVE RECEIPT BUTTON ================= */
+
+.remove-receipt{
+  position:absolute;
+  right:10px;
+  top:38px;          
+  background:#fff;
+  color:#d32f2f;
+  border:2px solid #d32f2f;
+  border-radius:50%;
+  width:24px;
+  height:24px;
+  font-size:14px;
+  font-weight:700;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+}
+
+.remove-receipt:hover{
+  background:#d32f2f;
+  color:#fff;
+}
 </style>
 </head>
   
@@ -354,23 +382,33 @@ select:focus{
 </select>
 </div>
 
-<div class="field">
-<label>Receipt</label>
-<input type="file" id="receipt" accept="image/*">
+<div class="field receipt">
+  <label>Receipt</label>
+  <input type="file" id="receipt" accept="image/*">
+
+  <button
+    type="button"
+    class="remove-receipt"
+    onclick="clearReceipt()"
+    title="Remove receipt"
+    aria-label="Remove receipt"
+  >
+    ✕
+  </button>
 </div>
 
 <div class="result">
-<div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
-<div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
-<div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
-<div class="row"><span>Tax & NI</span><strong>£<span id="tax">0.00</span></strong></div>
-<div class="row"><span>Total</span><strong>£<span id="total">0.00</span></strong></div>
+  <div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
+  <div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+  <div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+  <div class="row"><span>Tax & NI</span><strong>£<span id="tax">0.00</span></strong></div>
+  <div class="row"><span>Total</span><strong>£<span id="total">0.00</span></strong></div>
 </div>
 
 <button class="primary" onclick="saveOT()">Save Overtime</button>
-<button onclick="exportOTPDF()">Export Claim (PDF)</button>
+<button onclick="exportOTClaimPDF()">Export Claim (PDF)</button>
 <button onclick="exportOTCalendar()">Export to Calendar</button>
-</div>
+</div> 
 
 <!-- ================= ACTING UP ================= -->
 <div class="card" id="screen-acting" style="display:none">
@@ -676,6 +714,12 @@ function exportOTCalendar(){
   // Ensure latest calculations
   calcOT();
 
+  const expenseSelect = qs("expense");
+  const expenseText =
+    expenseSelect.value === "0"
+      ? "None"
+      : expenseSelect.options[expenseSelect.selectedIndex].text;
+
   const ics = buildICS({
     title: "Police Overtime",
     date: qs("otDate").value,
@@ -690,7 +734,7 @@ Gross: £${qs("gross").textContent}
 Tax & NI: £${qs("tax").textContent}
 Net Pay: £${qs("total").textContent}
 
-Notes: ${qs("expense").value || "—"}`
+Notes: ${expenseText}`
   });
 
   downloadICS("police-overtime.ics", ics);
@@ -757,7 +801,13 @@ function exportOTClaimPDF(){
   doc.text(`Finish Time: ${qs("otFinish").value}`, 20, y); y += 8;
   doc.text(`Hours: ${qs("otHours").value}`, 20, y); y += 10;
 
-  doc.text(`Expenses: £${qs("expense").value || "0.00"}`, 20, y);
+ const expenseSelect = qs("expense");
+const expenseText =
+  expenseSelect.value === "0"
+    ? "None"
+    : expenseSelect.options[expenseSelect.selectedIndex].text;
+
+doc.text(`Expenses: ${expenseText}`, 20, y);
   y += 12;
 
   const file = qs("receipt").files[0];
@@ -773,6 +823,16 @@ function exportOTClaimPDF(){
     doc.save("overtime-claim.pdf");
   }
 }
+function clearReceipt(){
+  const input = qs("receipt");
+  input.value = "";
+  document.querySelector(".remove-receipt").style.display = "none";
+}
+  
+qs("receipt").addEventListener("change", () => {
+  document.querySelector(".remove-receipt").style.display =
+    qs("receipt").files.length ? "flex" : "none";
+});
 </script>
 
 </body>
