@@ -6,22 +6,17 @@
 content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Police OT</title>
 
-<!-- ================= SAFE TO EDIT ================= -->
-<!-- You may change colours, fonts, spacing, text -->
 <style>
 :root{--blue:#0a3a8f}
 *{box-sizing:border-box}
-
 body{
 margin:0;
 font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;
 background:#f2f2f7;
-padding-bottom:60px;
+padding-bottom:40px;
 }
-
 h1,h2{text-align:center;margin:12px 0}
 label{font-size:.85rem;font-weight:600}
-
 input,select,button{
 width:100%;
 padding:10px;
@@ -31,7 +26,6 @@ border:1px solid #ccc;
 font-size:.9rem;
 text-align:left;
 }
-
 .card{
 max-width:420px;
 margin:70px auto 24px;
@@ -40,9 +34,7 @@ border-radius:16px;
 padding:16px;
 box-shadow:0 8px 20px rgba(0,0,0,.08);
 }
-
 .field{margin-top:10px}
-
 button.primary{
 background:var(--blue);
 color:#fff;
@@ -50,7 +42,18 @@ border:none;
 font-weight:700;
 margin-top:12px;
 }
-
+.result{
+background:#f5f5f7;
+border-radius:12px;
+padding:12px;
+margin-top:12px;
+}
+.row{
+display:flex;
+justify-content:space-between;
+margin:6px 0;
+font-size:.9rem;
+}
 .entry{
 background:#fff;
 border-radius:12px;
@@ -58,26 +61,23 @@ padding:10px;
 margin-top:10px;
 font-size:.85rem;
 }
-
 .entry img{
 max-width:100%;
 border-radius:8px;
 margin-top:6px;
 }
-
 .entry-actions{
 display:flex;
 gap:8px;
 margin-top:6px;
 }
-
 .entry-actions button{
 flex:1;
 padding:6px;
 font-size:.8rem;
 }
 
-/* Menu */
+/* MENU */
 #menuBtn{
 position:fixed;
 top:12px;
@@ -91,7 +91,6 @@ color:#fff;
 font-size:22px;
 z-index:2000;
 }
-
 #sideMenu{
 position:fixed;
 top:0;
@@ -103,9 +102,7 @@ padding:20px;
 transition:left .3s;
 z-index:1999;
 }
-
 #sideMenu h3{color:#fff;margin-top:40px}
-
 #sideMenu button{
 width:100%;
 padding:12px;
@@ -114,22 +111,51 @@ border-radius:10px;
 margin:10px 0;
 font-weight:700;
 }
+
+/* DISCLAIMER */
+#disclaimer{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.6);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:5000;
+}
 </style>
-<!-- ================= END SAFE TO EDIT ================= -->
 </head>
 
 <body>
+
+<!-- DISCLAIMER -->
+<div id="disclaimer">
+  <div style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
+    <h2>Disclaimer</h2>
+    <p style="font-size:.9rem;line-height:1.45">
+      The figures used in this application are <b>not guaranteed to be 100% accurate</b>.<br><br>
+      They are intended to be as close as possible and may be outdated,
+      particularly following recent pay awards or changes.<br><br>
+      This app is for guidance only and must not be relied upon as an official calculation.
+    </p>
+    <label style="display:flex;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="dontShowAgain" style="margin-right:8px">
+      Don’t show again
+    </label>
+    <button class="primary" onclick="acceptDisclaimer()">I Understand</button>
+  </div>
+</div>
 
 <button id="menuBtn">☰</button>
 
 <div id="sideMenu">
 <h3>Menu</h3>
 <button onclick="show('ot')">Police Overtime</button>
+<button onclick="show('acting')">Acting Up</button>
 <button onclick="show('log')">Log</button>
 <button onclick="clearAll()">Clear All Data</button>
 </div>
 
-<!-- ================= UI (SAFE TEXT EDITS ONLY) ================= -->
+<!-- ================= OVERTIME ================= -->
 <div class="card" id="screen-ot">
 <h2>Police Overtime</h2>
 
@@ -147,23 +173,45 @@ font-weight:700;
 </div>
 
 <div class="field">
+<label>Rank</label>
+<select id="otRank">
+<option value="PC">PC</option>
+<option value="PS">PS</option>
+</select>
+</div>
+
+<div class="field">
+<label>Pay Point</label>
+<select id="otPoint"></select>
+</div>
+
+<div class="field">
 <label>Date</label>
-<input type="date" id="date">
+<input type="date" id="otDate">
 </div>
 
 <div class="field">
 <label>Start Time</label>
-<input type="time" id="start">
+<input type="time" id="otStart">
 </div>
 
 <div class="field">
 <label>Finish Time</label>
-<input type="time" id="finish">
+<input type="time" id="otFinish">
 </div>
 
 <div class="field">
 <label>Total Hours</label>
-<input id="hours" readonly>
+<input id="otHours" readonly>
+</div>
+
+<div class="field">
+<label>OT Rate</label>
+<select id="otRate">
+<option value="1.3333">Standard (1⅓)</option>
+<option value="1.5">Rest Day (1½)</option>
+<option value="2">Cancelled RD (Double)</option>
+</select>
 </div>
 
 <div class="field">
@@ -181,74 +229,203 @@ font-weight:700;
 <input type="file" id="receipt" accept="image/*">
 </div>
 
+<div class="result">
+<div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
+<div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
+<div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
+<div class="row"><span>Tax & NI</span><strong>£<span id="tax">0.00</span></strong></div>
+<div class="row"><span>Total</span><strong>£<span id="total">0.00</span></strong></div>
+</div>
+
 <button class="primary" onclick="saveOT()">Save Overtime</button>
 </div>
 
+<!-- ================= ACTING UP ================= -->
+<div class="card" id="screen-acting" style="display:none">
+<h2>Acting Up Allowance</h2>
+
+<div class="field">
+<label>Force</label>
+<select id="actForce">
+<option value="met">Metropolitan Police</option>
+<option value="other">Other Home Office Force</option>
+</select>
+</div>
+
+<div class="field">
+<label>Current Rank</label>
+<select id="curRank">
+<option value="PC">PC</option>
+<option value="PS">PS</option>
+</select>
+</div>
+
+<div class="field">
+<label>Current Pay Point</label>
+<select id="curPoint"></select>
+</div>
+
+<div class="field">
+<label>Acting Rank</label>
+<select id="actRank">
+<option value="PS">Police Sergeant</option>
+<option value="INSP">Inspector</option>
+</select>
+</div>
+
+<div class="field">
+<label>Date</label>
+<input type="date" id="actDate">
+</div>
+
+<div class="field">
+<label>Start Time</label>
+<input type="time" id="actStart">
+</div>
+
+<div class="field">
+<label>Finish Time</label>
+<input type="time" id="actFinish">
+</div>
+
+<div class="field">
+<label>Total Hours</label>
+<input id="actHours" readonly>
+</div>
+
+<div class="result">
+<div class="row"><span>Hourly Difference</span><strong>£<span id="diff">0.00</span></strong></div>
+<div class="row"><span>Gross</span><strong>£<span id="actGross">0.00</span></strong></div>
+<div class="row"><span>Tax & NI</span><strong>£<span id="actTax">0.00</span></strong></div>
+<div class="row"><span>Total</span><strong>£<span id="actTotal">0.00</span></strong></div>
+</div>
+
+<button class="primary" onclick="saveActing()">Save Acting Up</button>
+</div>
+
+<!-- ================= LOG ================= -->
 <div class="card" id="screen-log" style="display:none">
 <h2>Log</h2>
 <div id="log"></div>
 </div>
-<!-- ================= END UI ================= -->
 
-<!-- ================= DO NOT EDIT ================= -->
 <script>
-const STORE='policeOT';
+/* ================= CONFIG ================= */
+const APP_VERSION="1.0.0";
+const LONDON=9738;
+const STORE="policeOT";
+
+/* PAY SCALES */
+const PAY={
+PC:[31646,32472,33789,35106,37737,43038,50256],
+PS:[43698,45409,47172],
+INSP:[63768,65505,67236,68982]
+};
+
 const qs=i=>document.getElementById(i);
 
-/* Time calculation (15 min rounding) */
+/* DISCLAIMER */
+function acceptDisclaimer(){
+localStorage.setItem("disclaimerAccepted",JSON.stringify({
+version:APP_VERSION,
+dontShow:qs("dontShowAgain").checked
+}));
+qs("disclaimer").style.display="none";
+}
+(function(){
+const d=JSON.parse(localStorage.getItem("disclaimerAccepted")||"null");
+if(d&&d.version===APP_VERSION&&d.dontShow)
+qs("disclaimer").style.display="none";
+})();
+
+/* TIME */
+function round15(m){return Math.round(m/15)*15}
 function hoursBetween(s,f){
-if(!s||!f)return'';
-let [sh,sm]=s.split(':').map(Number);
-let [fh,fm]=f.split(':').map(Number);
+if(!s||!f)return"";
+let [sh,sm]=s.split(":").map(Number);
+let [fh,fm]=f.split(":").map(Number);
 let m=(fh*60+fm)-(sh*60+sm);
 if(m<0)m+=1440;
-return (Math.round(m/15)*15/60).toFixed(2);
+return(round15(m)/60).toFixed(2);
 }
 
-['start','finish'].forEach(i=>{
-qs(i).onchange=()=>{
-qs('hours').value=hoursBetween(qs('start').value,qs('finish').value);
-};
-});
+/* OVERTIME */
+function loadOTPoints(){
+qs("otPoint").innerHTML="";
+PAY[qs("otRank").value].forEach((_,i)=>qs("otPoint").add(new Option(i+1,i)));
+calcOT();
+}
+qs("otRank").onchange=loadOTPoints;
+loadOTPoints();
 
-/* Storage */
-function load(){return JSON.parse(localStorage.getItem(STORE)||'[]')}
+function calcOT(){
+qs("otHours").value=hoursBetween(qs("otStart").value,qs("otFinish").value);
+if(!qs("otHours").value)return;
+let annual=PAY[qs("otRank").value][qs("otPoint").value]+(qs("force").value==="met"?LONDON:0);
+let base=annual/52/40;
+let ot=base*qs("otRate").value;
+let gross=(ot-base)*qs("otHours").value;
+let tax=gross*(annual>50270?0.42:0.28);
+qs("base").textContent=base.toFixed(2);
+qs("ot").textContent=ot.toFixed(2);
+qs("gross").textContent=gross.toFixed(2);
+qs("tax").textContent=tax.toFixed(2);
+qs("total").textContent=(gross-tax).toFixed(2);
+}
+["otStart","otFinish","otRate","otPoint","force"].forEach(i=>qs(i).onchange=calcOT);
+
+/* ACTING */
+function loadActPoints(){
+qs("curPoint").innerHTML="";
+PAY[qs("curRank").value].forEach((_,i)=>qs("curPoint").add(new Option(i+1,i)));
+calcActing();
+}
+qs("curRank").onchange=loadActPoints;
+loadActPoints();
+
+function calcActing(){
+qs("actHours").value=hoursBetween(qs("actStart").value,qs("actFinish").value);
+if(!qs("actHours").value)return;
+let cur=PAY[qs("curRank").value][qs("curPoint").value]+(qs("actForce").value==="met"?LONDON:0);
+let act=qs("actRank").value==="PS"?PAY.PS[0]:PAY.INSP[0];
+act+=(qs("actForce").value==="met"?LONDON:0);
+let diff=(act/52/40)-(cur/52/40);
+let gross=diff*qs("actHours").value;
+let tax=gross*(cur>50270?0.42:0.28);
+qs("diff").textContent=diff.toFixed(2);
+qs("actGross").textContent=gross.toFixed(2);
+qs("actTax").textContent=tax.toFixed(2);
+qs("actTotal").textContent=(gross-tax).toFixed(2);
+}
+["actStart","actFinish","curPoint","actRank","actForce"].forEach(i=>qs(i).onchange=calcActing);
+
+/* LOG */
+function load(){return JSON.parse(localStorage.getItem(STORE)||"[]")}
 function save(d){localStorage.setItem(STORE,JSON.stringify(d))}
 
-/* Save overtime */
 function saveOT(){
-const img=qs('receipt').files[0]
-?URL.createObjectURL(qs('receipt').files[0])
-:null;
-
-const d=load();
-d.push({
-force:qs('force').value,
-warrant:qs('warrant').value,
-date:qs('date').value,
-start:qs('start').value,
-finish:qs('finish').value,
-hours:qs('hours').value,
-expense:qs('expense').value,
-receipt:img
-});
-save(d);
-renderLog();
-show('log');
+calcOT();
+let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
+let d=load();
+d.push({type:"Overtime",date:qs("otDate").value,hours:qs("otHours").value,total:qs("total").textContent,expense:qs("expense").value,receipt:img});
+save(d);renderLog();show("log");
 }
 
-/* Render log */
+function saveActing(){
+calcActing();
+let d=load();
+d.push({type:"Acting Up",date:qs("actDate").value,hours:qs("actHours").value,total:qs("actTotal").textContent});
+save(d);renderLog();show("log");
+}
+
 function renderLog(){
-qs('log').innerHTML='';
+qs("log").innerHTML="";
 load().forEach((e,i)=>{
-qs('log').innerHTML+=`
+qs("log").innerHTML+=`
 <div class="entry">
-<b>${e.force.toUpperCase()}</b><br>
-${e.warrant}<br>
-${e.date}<br>
-${e.start}-${e.finish} (${e.hours}h)<br>
-Expense £${e.expense}
-${e.receipt?`<img src="${e.receipt}">`:''}
+<b>${e.type}</b><br>${e.date}<br>${e.hours} hrs<br>Total £${e.total}
+${e.expense?`<br>Expense £${e.expense}`:""}
+${e.receipt?`<img src="${e.receipt}">`:""}
 <div class="entry-actions">
 <button onclick="del(${i})">Delete</button>
 </div>
@@ -256,35 +433,23 @@ ${e.receipt?`<img src="${e.receipt}">`:''}
 });
 }
 
-/* Delete */
-function del(i){
-let d=load();
-d.splice(i,1);
-save(d);
-renderLog();
-}
-
-/* Clear all */
+function del(i){let d=load();d.splice(i,1);save(d);renderLog()}
 function clearAll(){
-localStorage.removeItem(STORE);
+localStorage.clear();
 renderLog();
-alert('All data cleared');
+alert("All data cleared");
 }
 
-/* Navigation */
+/* NAV */
 function show(s){
-['ot','log'].forEach(x=>qs('screen-'+x).style.display='none');
-qs('screen-'+s).style.display='block';
-qs('sideMenu').style.left='-260px';
+["ot","acting","log"].forEach(x=>qs("screen-"+x).style.display="none");
+qs("screen-"+s).style.display="block";
+qs("sideMenu").style.left="-260px";
 }
-
-qs('menuBtn').onclick=()=>{
-qs('sideMenu').style.left=
-qs('sideMenu').style.left==='0px'
-?'-260px':'0px';
+qs("menuBtn").onclick=()=>{
+qs("sideMenu").style.left=qs("sideMenu").style.left==="0px"?"-260px":"0px";
 };
 </script>
-<!-- ================= END DO NOT EDIT ================= -->
-
 </body>
 </html>
+
