@@ -246,6 +246,26 @@ select:focus{
 #menuBtn{
   z-index:2001;
 }
+/* ================= HEADER + HAMBURGER ALIGN FIX ================= */
+
+/* Make page headers act like a fixed app bar */
+.card h2{
+  position:sticky;
+  top:0;
+  padding-right:64px; /* space for hamburger */
+}
+
+/* Dock hamburger visually into the title bar */
+#menuBtn{
+  top:8px;
+  right:12px;
+  height:36px;
+  width:36px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 </style>
 </head>
   
