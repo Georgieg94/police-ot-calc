@@ -280,6 +280,22 @@ select:focus{
   background:#d32f2f;
   color:#fff;
 }
+
+/* ================= DANGER BUTTON ================= */
+
+button.danger{
+  background:#d32f2f !important;
+  color:#fff !important;
+  border:none;
+}
+
+button.danger:hover{
+  filter:brightness(.9);
+}
+
+button.danger:active{
+  transform:scale(.96);
+}
 </style>
 </head>
   
@@ -310,7 +326,7 @@ select:focus{
 <button onclick="show('ot')">Police Overtime</button>
 <button onclick="show('acting')">Acting Up</button>
 <button onclick="show('log')">Log</button>
-<button onclick="clearAll()">Clear All Data</button>
+<button class="danger" onclick="clearAll()">Clear All Data</button>
 </div>
 
 <!-- ================= OVERTIME ================= -->
@@ -653,10 +669,68 @@ d.splice(i,1);
 save(d);
 renderLog();
 }
+
 function clearAll(){
-localStorage.clear();
-renderLog();
-alert("All data cleared");
+  const msg =
+`⚠️ CLEAR ALL DATA
+
+This will permanently delete:
+• All overtime entries
+• All acting up entries
+• The entire log
+• Any attached receipts
+• All calculated totals
+
+This action CANNOT be undone.
+
+Do you want to continue?`;
+
+  if(!confirm(msg)) return;
+
+  /* ===== CLEAR STORED DATA ===== */
+  localStorage.removeItem(STORE);
+
+  /* ===== OVERTIME ===== */
+  [
+    "force","warrant","otRank","otPoint","otDate",
+    "otStart","otFinish","otRate","expense"
+  ].forEach(id => {
+    if(qs(id)){
+      qs(id).value =
+        qs(id).tagName === "SELECT"
+          ? qs(id).options[0].value
+          : "";
+    }
+  });
+
+  qs("otHours").value = "";
+  ["base","ot","gross","tax","total"].forEach(id => qs(id).textContent = "0.00");
+
+  /* Receipt */
+  qs("receipt").value = "";
+  document.querySelector(".remove-receipt").style.display = "none";
+
+  /* ===== ACTING UP ===== */
+  [
+    "actForce","curRank","curPoint","actRank",
+    "actDate","actStart","actFinish"
+  ].forEach(id => {
+    if(qs(id)){
+      qs(id).value =
+        qs(id).tagName === "SELECT"
+          ? qs(id).options[0].value
+          : "";
+    }
+  });
+
+  qs("actHours").value = "";
+  ["diff","actGross","actTax","actTotal"].forEach(id => qs(id).textContent = "0.00");
+
+  /* ===== LOG ===== */
+  qs("log").innerHTML = "";
+  editingIndex = null;
+
+  alert("All data has been cleared.");
 }
 
 /* NAV */
