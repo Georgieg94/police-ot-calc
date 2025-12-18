@@ -194,6 +194,34 @@ z-index:5000;
 .entry + .entry{
   margin-top:14px;
 }
+/* ================= FORM FIELD COLOUR FIX ================= */
+
+/* Text inputs, date, time, readonly fields */
+input{
+  background:#fff !important;
+  color:#000;
+  border:2px solid #d1d1d6;
+}
+
+/* Dropdowns / selects */
+select{
+  background:#fff !important;
+  color:#000;
+  border:2px solid #d1d1d6;
+}
+
+/* Remove mobile grey fill (iOS / Chrome) */
+input:read-only{
+  background:#fff !important;
+}
+
+/* Focus state (optional but clearer) */
+input:focus,
+select:focus{
+  outline:none;
+  border-color:var(--blue);
+  box-shadow:0 0 0 2px rgba(10,58,143,.15);
+}
 </style>
 </head>
   
