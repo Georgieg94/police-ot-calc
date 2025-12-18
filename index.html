@@ -662,11 +662,13 @@ const saveCal = d =>
 
 /* DISCLAIMER */
 function acceptDisclaimer(){
-localStorage.setItem("disclaimerAccepted",JSON.stringify({
-dontShow:qs("dontShowAgain").checked
-}));
-qs("disclaimer").style.display="none";
+  localStorage.setItem("disclaimerAccepted", JSON.stringify({
+    version: APP_VERSION,
+    dontShow: qs("dontShowAgain").checked
+  }));
+  qs("disclaimer").style.display = "none";
 }
+
 (function(){
 const d=JSON.parse(localStorage.getItem("disclaimerAccepted")||"null");
 if(d&&d.version===APP_VERSION&&d.dontShow)
