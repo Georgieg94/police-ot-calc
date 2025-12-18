@@ -406,6 +406,8 @@ qs("actTotal").textContent=(gross-tax).toFixed(2);
 function load(){return JSON.parse(localStorage.getItem(STORE)||"[]")}
 function save(d){localStorage.setItem(STORE,JSON.stringify(d))}
 
+let editingIndex=null;
+
 function saveOT(){
 calcOT();
 let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
@@ -424,19 +426,63 @@ save(d);renderLog();show("log");
 function renderLog(){
 qs("log").innerHTML="";
 load().forEach((e,i)=>{
+if(editingIndex===i){
+qs("log").innerHTML+=`
+<div class="entry">
+<label>Date</label>
+<input type="date" id="editDate" value="${e.date}">
+<label>Hours</label>
+<input id="editHours" value="${e.hours}">
+${e.expense!==undefined?`
+<label>Expense</label>
+<input id="editExpense" value="${e.expense}">
+`:""}
+<div class="entry-actions">
+<button onclick="saveEdit(${i})">Save</button>
+<button onclick="cancelEdit()">Cancel</button>
+</div>
+</div>`;
+}else{
 qs("log").innerHTML+=`
 <div class="entry">
 <b>${e.type}</b><br>${e.date}<br>${e.hours} hrs
 ${e.expense?`<br>Expense £${e.expense}`:""}
 ${e.receipt?`<img src="${e.receipt}">`:""}
 <div class="entry-actions">
+<button onclick="editEntry(${i})">Edit</button>
 <button onclick="del(${i})">Delete</button>
 </div>
 </div>`;
+}
 });
 }
 
-function del(i){let d=load();d.splice(i,1);save(d);renderLog()}
+function editEntry(i){
+editingIndex=i;
+renderLog();
+}
+function cancelEdit(){
+editingIndex=null;
+renderLog();
+}
+function saveEdit(i){
+let d=load();
+d[i].date=qs("editDate").value;
+d[i].hours=qs("editHours").value;
+if(d[i].expense!==undefined){
+d[i].expense=qs("editExpense").value;
+}
+save(d);
+editingIndex=null;
+renderLog();
+}
+
+function del(i){
+let d=load();
+d.splice(i,1);
+save(d);
+renderLog();
+}
 function clearAll(){
 localStorage.clear();
 renderLog();
@@ -452,86 +498,6 @@ qs("sideMenu").style.left="-260px";
 qs("menuBtn").onclick=()=>{
 qs("sideMenu").style.left=qs("sideMenu").style.left==="0px"?"-260px":"0px";
 };
-
-/* ================= CLAIM PDF EXPORT ================= */
-function exportOTPDF(){
-const r=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
-const w=window.open("","_blank");
-w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>Overtime Claim</title>
-<style>
-body{font-family:Arial;padding:24px;font-size:12px}
-h1{text-align:center}
-img{max-width:100%;margin-top:10px;border:1px solid #000}
-</style></head><body>
-<h1>${qs("force").value==="met"?"Metropolitan Police":"Home Office Force"}</h1>
-<div><b>Warrant Number:</b> ${qs("warrant").value||"—"}</div>
-<div><b>Date:</b> ${qs("otDate").value}</div>
-<div><b>Start Time:</b> ${qs("otStart").value}</div>
-<div><b>Finish Time:</b> ${qs("otFinish").value}</div>
-<div><b>Number of Hours:</b> ${qs("otHours").value}</div>
-<div><b>Expense Amount:</b> £${qs("expense").value}</div>
-${r?`<img src="${r}">`:""}
-<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
-</body></html>`);
-w.document.close();
-}
-
-/* ================= CALENDAR EXPORT ================= */
-function exportOTCalendar(){
-if(!qs("otDate").value||!qs("otStart").value||!qs("otFinish").value){
-alert("Please complete date and time fields.");
-return;
-}
-const date=qs("otDate").value.replace(/-/g,"");
-const start=qs("otStart").value.replace(":","")+"00";
-const finish=qs("otFinish").value.replace(":","")+"00";
-const ics=`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Police OT//EN
-BEGIN:VEVENT
-UID:${Date.now()}@policeot
-DTSTAMP:${date}T${start}
-DTSTART:${date}T${start}
-DTEND:${date}T${finish}
-SUMMARY:Overtime Duty
-DESCRIPTION:Force ${qs("force").value==="met"?"Metropolitan Police":"Home Office Force"}\\nWarrant ${qs("warrant").value||""}\\nHours ${qs("otHours").value}\\nExpense £${qs("expense").value}
-END:VEVENT
-END:VCALENDAR`;
-const blob=new Blob([ics],{type:"text/calendar"});
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="overtime.ics";
-a.click();
-}
-
-/* ================= ACTING UP CALENDAR EXPORT ================= */
-function exportActingCalendar(){
-if(!qs("actDate").value||!qs("actStart").value||!qs("actFinish").value){
-alert("Please complete date and time fields.");
-return;
-}
-const date=qs("actDate").value.replace(/-/g,"");
-const start=qs("actStart").value.replace(":","")+"00";
-const finish=qs("actFinish").value.replace(":","")+"00";
-const ics=`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Police OT//EN
-BEGIN:VEVENT
-UID:${Date.now()}@policeot
-DTSTAMP:${date}T${start}
-DTSTART:${date}T${start}
-DTEND:${date}T${finish}
-SUMMARY:Acting Up Duty
-DESCRIPTION:Force ${qs("actForce").value==="met"?"Metropolitan Police":"Home Office Force"}\\nCurrent Rank ${qs("curRank").value}\\nActing Rank ${qs("actRank").value}\\nHours ${qs("actHours").value}
-END:VEVENT
-END:VCALENDAR`;
-const blob=new Blob([ics],{type:"text/calendar"});
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="acting-up.ics";
-a.click();
-}
 </script>
 
 </body>
