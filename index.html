@@ -122,6 +122,67 @@ align-items:center;
 justify-content:center;
 z-index:5000;
 }
+/* ================= UI NORMALISATION PATCH ================= */
+
+/* Make ALL buttons visually identical */
+button{
+background:var(--blue);
+color:#fff;
+border:none;
+font-weight:700;
+cursor:pointer;
+}
+
+/* Remove secondary button visual mismatch */
+button:not(.primary){
+background:var(--blue);
+color:#fff;
+}
+
+/* Ensure buttons don't overflow cards */
+button{
+max-width:100%;
+}
+
+/* Normalize all inputs/selects to fit card width */
+input, select{
+background:#fff;
+}
+
+/* Prevent iOS zoom / overflow issues */
+input, select, button{
+font-size:16px;
+}
+
+/* Clearer log entry boxes */
+.entry{
+background:#f9f9fb;
+border:1px solid #e0e0e5;
+}
+
+/* Clearer edit mode fields */
+.entry input{
+background:#fff;
+border:1px solid #ccc;
+}
+
+/* Improve spacing inside cards so nothing clips */
+.card{
+padding-bottom:20px;
+}
+
+/* Prevent result rows from wrapping awkwardly */
+.result .row{
+align-items:center;
+}
+
+/* Make images behave inside log entries */
+.entry img{
+display:block;
+}
+
+/* ================= END PATCH ================= */
+
 </style>
 </head>
 
