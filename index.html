@@ -518,7 +518,7 @@ body.dark .fc-toolbar-title{
   <div class="row"><span>Total</span><strong>£<span id="total">0.00</span></strong></div>
 </div>
 
-<button class="primary" onclick="saveOT()">Save Overtime</button>
+<button class="primary" onclick="saveOTStore()">Save Overtime</button>
 <button onclick="exportOTClaimPDF()">Export Claim (PDF)</button>
 <button onclick="exportOTCalendar()">Export to Calendar</button>
 </div> 
@@ -641,17 +641,18 @@ const qs = i => document.getElementById(i);
 
 /* ================= STORE HELPERS ================= */
 
-const loadOT = () =>
+const loadOTStore = () =>
   JSON.parse(localStorage.getItem(STORE_OT) || "[]");
 
-const saveOT = d =>
+const saveOTStore = d =>
   localStorage.setItem(STORE_OT, JSON.stringify(d));
 
-const loadAct = () =>
+const loadActStore = () =>
   JSON.parse(localStorage.getItem(STORE_ACT) || "[]");
 
-const saveAct = d =>
+const saveActStore = d =>
   localStorage.setItem(STORE_ACT, JSON.stringify(d));
+
 
 const loadCal = () =>
   JSON.parse(localStorage.getItem(STORE_CAL) || "[]");
@@ -687,13 +688,13 @@ return(round15(m)/60).toFixed(2);
 }
 
 /* OVERTIME */
-function loadOTPoints(){
+function loadOTStorePoints(){
 qs("otPoint").innerHTML="";
 PAY[qs("otRank").value].forEach((_,i)=>qs("otPoint").add(new Option(i+1,i)));
 calcOT();
 }
-qs("otRank").onchange=loadOTPoints;
-loadOTPoints();
+qs("otRank").onchange=loadOTStorePoints;
+loadOTStorePoints();
 
 function calcOT(){
 qs("otHours").value=hoursBetween(qs("otStart").value,qs("otFinish").value);
@@ -712,13 +713,13 @@ qs("total").textContent=(gross-tax).toFixed(2);
 ["otStart","otFinish","otRate","otPoint","force"].forEach(i=>qs(i).onchange=calcOT);
 
 /* ACTING */
-function loadActPoints(){
+function loadActStorePoints(){
 qs("curPoint").innerHTML="";
 PAY[qs("curRank").value].forEach((_,i)=>qs("curPoint").add(new Option(i+1,i)));
 calcActing();
 }
-qs("curRank").onchange=loadActPoints;
-loadActPoints();
+qs("curRank").onchange=loadActStorePoints;
+loadActStorePoints();
 
 function calcActing(){
 qs("actHours").value=hoursBetween(qs("actStart").value,qs("actFinish").value);
@@ -739,8 +740,8 @@ qs("actTotal").textContent=(gross-tax).toFixed(2);
 /* LOG */
 function load(){
   return [
-    ...loadOT(),
-    ...loadAct(),
+    ...loadOTStore(),
+    ...loadActStore(),
     ...loadCal()
   ];
 }
@@ -748,14 +749,14 @@ function load(){
 
 let editingIndex=null;
 
-function saveOT(){
+function saveOTStore(){
   calcOT();
 
   const img = qs("receipt").files[0]
     ? URL.createObjectURL(qs("receipt").files[0])
     : null;
 
-  const d = loadOT();
+  const d = loadOTStore();
   d.push({
     type:"Overtime",
     date:qs("otDate").value,
@@ -764,7 +765,7 @@ function saveOT(){
     receipt:img
   });
 
-  saveOT(d);
+  saveOTStore(d);
   renderLog();
   show("log");
 }
@@ -772,14 +773,14 @@ function saveOT(){
 function saveActing(){
   calcActing();
 
-  const d = loadAct();
+  const d = loadActStore();
   d.push({
     type:"Acting Up",
     date:qs("actDate").value,
     hours:qs("actHours").value
   });
 
-  saveAct(d);
+  saveActStore(d);
   renderLog();
   show("log");
 }
@@ -840,8 +841,8 @@ function saveEdit(i){
   const act = all.filter(e => e.type === "Acting Up");
   const cal = all.filter(e => !["Overtime","Acting Up"].includes(e.type));
 
-  saveOT(ot);
-  saveAct(act);
+  saveOTStore(ot);
+  saveActStore(act);
   saveCal(cal);
 
   editingIndex = null;
@@ -856,8 +857,8 @@ function del(i){
   const act = all.filter(e => e.type === "Acting Up");
   const cal = all.filter(e => !["Overtime","Acting Up"].includes(e.type));
 
-  saveOT(ot);
-  saveAct(act);
+  saveOTStore(ot);
+  saveActStore(act);
   saveCal(cal);
 
   renderLog();
@@ -926,8 +927,8 @@ localStorage.removeItem(STORE_CAL);
   editingIndex = null;
 
   /* Rebuild pay point dropdowns */
-loadOTPoints();
-loadActPoints();
+loadOTStorePoints();
+loadActStorePoints();
 
   alert("All data has been cleared.");
 }
@@ -1109,10 +1110,13 @@ function clearReceipt(){
   document.querySelector(".remove-receipt").style.display = "none";
 }
   
-qs("receipt").addEventListener("change", () => {
-  document.querySelector(".remove-receipt").style.display =
-    qs("receipt").files.length ? "flex" : "none";
-});
+const receiptInput = qs("receipt");
+if(receiptInput){
+  receiptInput.addEventListener("change", () => {
+    document.querySelector(".remove-receipt").style.display =
+      receiptInput.files.length ? "flex" : "none";
+  });
+}
   
 /* ================= DARK MODE ================= */
 
