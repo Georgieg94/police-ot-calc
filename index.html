@@ -1246,10 +1246,17 @@ function addCalendarEntry(){
 document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("acceptDisclaimerBtn");
 
-  if(btn){
-    btn.addEventListener("click", acceptDisclaimer);
-    btn.addEventListener("touchend", acceptDisclaimer);
-  }
+  if (!btn) return;
+
+  btn.addEventListener("touchend", e => {
+    e.preventDefault();
+    acceptDisclaimer();
+  });
+
+  btn.addEventListener("click", e => {
+    e.preventDefault();
+    acceptDisclaimer();
+  });
 });
 </script>
 
