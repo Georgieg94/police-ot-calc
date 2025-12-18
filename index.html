@@ -132,6 +132,37 @@ align-items:center;
 justify-content:center;
 z-index:5000;
 }
+  
+/* DISCLAIMER */
+#disclaimer{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:5000;
+}
+
+/* Ensure disclaimer buttons receive clicks on mobile */
+#disclaimer{
+  pointer-events:auto;
+}
+
+#disclaimerBox{
+  pointer-events:auto;
+  position:relative;
+  z-index:6000;
+}
+
+
+/* Fix disclaimer checkbox stealing clicks */
+#disclaimer input[type="checkbox"]{
+  width:auto;
+  padding:0;
+  margin-right:8px;
+}
+
 
   /* ================= UNIFIED BUTTON STYLE ================= */
 
@@ -398,7 +429,7 @@ body.dark .fc-toolbar-title{
 
 <!-- DISCLAIMER -->
 <div id="disclaimer">
-  <div style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
+<div id="disclaimerBox" style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
     <h2>Disclaimer</h2>
     <p style="font-size:.9rem;line-height:1.45">
       The figures used in this application are <b>not guaranteed to be 100% accurate</b>.<br><br>
@@ -410,7 +441,7 @@ body.dark .fc-toolbar-title{
       <input type="checkbox" id="dontShowAgain" style="margin-right:8px">
       Don’t show again
     </label>
-    <button class="primary" onclick="acceptDisclaimer()">I Understand</button>
+    <button class="primary" id="acceptDisclaimerBtn">I Understand</button>
   </div>
 </div>
 
@@ -1211,6 +1242,15 @@ function addCalendarEntry(){
   localStorage.removeItem("policeOT");
 })();
 
+/* ===== DISCLAIMER BUTTON FIX (MOBILE SAFE) ===== */
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("acceptDisclaimerBtn");
+
+  if(btn){
+    btn.addEventListener("click", acceptDisclaimer);
+    btn.addEventListener("touchend", acceptDisclaimer);
+  }
+});
 </script>
 
 </body>
