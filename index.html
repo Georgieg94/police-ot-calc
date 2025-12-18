@@ -442,6 +442,8 @@ select:focus{
 <div id="log"></div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  
+  
 <script>
 /* ================= CONFIG ================= */
 const APP_VERSION="1.0.0";
@@ -720,6 +722,56 @@ Net Pay: £${qs("actTotal").textContent}`
   });
 
   downloadICS("acting-up.ics", ics);
+}
+/* ===== OVERTIME CLAIM PDF EXPORT ===== */
+function exportOTClaimPDF(){
+  if(!qs("otDate").value || !qs("otStart").value || !qs("otFinish").value){
+    alert("Please complete the overtime details first");
+    return;
+  }
+
+  // Ensure latest calculations at click time
+  calcOT();
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  let y = 20;
+
+  doc.setFontSize(16);
+  doc.text("Overtime Claim", 20, y);
+  y += 10;
+
+  doc.setFontSize(11);
+
+  const forceName =
+    qs("force").value === "met"
+      ? "Metropolitan Police"
+      : "Home Office Force";
+
+  doc.text(`Force: ${forceName}`, 20, y); y += 8;
+  doc.text(`Warrant Number: ${qs("warrant").value || "—"}`, 20, y); y += 8;
+  doc.text(`Date: ${qs("otDate").value}`, 20, y); y += 8;
+
+  doc.text(`Start Time: ${qs("otStart").value}`, 20, y); y += 8;
+  doc.text(`Finish Time: ${qs("otFinish").value}`, 20, y); y += 8;
+  doc.text(`Hours: ${qs("otHours").value}`, 20, y); y += 10;
+
+  doc.text(`Expenses: £${qs("expense").value || "0.00"}`, 20, y);
+  y += 12;
+
+  const file = qs("receipt").files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = e => {
+      const imgType = file.type.includes("png") ? "PNG" : "JPEG";
+      doc.addImage(e.target.result, imgType, 20, y, 170, 80);
+      doc.save("overtime-claim.pdf");
+    };
+    reader.readAsDataURL(file);
+  } else {
+    doc.save("overtime-claim.pdf");
+  }
 }
 </script>
 
