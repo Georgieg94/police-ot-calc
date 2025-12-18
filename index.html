@@ -671,17 +671,29 @@ function exportOTCalendar(){
     return;
   }
 
+  // Ensure latest calculations
+  calcOT();
+
   const ics = buildICS({
     title: "Police Overtime",
     date: qs("otDate").value,
     start: qs("otStart").value,
     finish: qs("otFinish").value,
-    description: `Overtime claim\nHours: ${qs("otHours").value}`
+    description:
+`Overtime Duty
+
+Hours: ${qs("otHours").value}
+OT Rate: £${qs("ot").textContent} / hr
+Gross: £${qs("gross").textContent}
+Tax & NI: £${qs("tax").textContent}
+Net Pay: £${qs("total").textContent}
+
+Notes: ${qs("expense").value || "—"}`
   });
 
   downloadICS("police-overtime.ics", ics);
 }
-
+  
 /* ===== ACTING UP CALENDAR EXPORT ===== */
 function exportActingCalendar(){
   if(!qs("actDate").value || !qs("actStart").value || !qs("actFinish").value){
@@ -689,12 +701,22 @@ function exportActingCalendar(){
     return;
   }
 
+  // Ensure latest calculations
+  calcActing();
+
   const ics = buildICS({
     title: "Acting Up Duty",
     date: qs("actDate").value,
     start: qs("actStart").value,
     finish: qs("actFinish").value,
-    description: `Acting Up\nHours: ${qs("actHours").value}`
+    description:
+`Acting Up Duty
+
+Hours: ${qs("actHours").value}
+Hourly Difference: £${qs("diff").textContent}
+Gross: £${qs("actGross").textContent}
+Tax & NI: £${qs("actTax").textContent}
+Net Pay: £${qs("actTotal").textContent}`
   });
 
   downloadICS("acting-up.ics", ics);
