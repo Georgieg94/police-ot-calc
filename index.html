@@ -628,6 +628,77 @@ qs("sideMenu").style.left="-260px";
 qs("menuBtn").onclick=()=>{
 qs("sideMenu").style.left=qs("sideMenu").style.left==="0px"?"-260px":"0px";
 };
+  
+/* ================= CALENDAR EXPORT ================= */
+
+function downloadICS(filename, content){
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function buildICS({ title, date, start, finish, description }){
+  const pad = n => String(n).padStart(2, "0");
+
+  const toICSDate = (d, t) => {
+    const [y,m,day] = d.split("-");
+    const [h,min] = t.split(":");
+    return `${y}${pad(m)}${pad(day)}T${pad(h)}${pad(min)}00`;
+  };
+
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Police OT//EN
+BEGIN:VEVENT
+UID:${Date.now()}@policeot
+DTSTAMP:${toICSDate(date, start)}
+DTSTART:${toICSDate(date, start)}
+DTEND:${toICSDate(date, finish)}
+SUMMARY:${title}
+DESCRIPTION:${description}
+END:VEVENT
+END:VCALENDAR`;
+}
+
+/* ===== OVERTIME CALENDAR EXPORT ===== */
+function exportOTCalendar(){
+  if(!qs("otDate").value || !qs("otStart").value || !qs("otFinish").value){
+    alert("Please enter date, start time and finish time");
+    return;
+  }
+
+  const ics = buildICS({
+    title: "Police Overtime",
+    date: qs("otDate").value,
+    start: qs("otStart").value,
+    finish: qs("otFinish").value,
+    description: `Overtime claim\nHours: ${qs("otHours").value}`
+  });
+
+  downloadICS("police-overtime.ics", ics);
+}
+
+/* ===== ACTING UP CALENDAR EXPORT ===== */
+function exportActingCalendar(){
+  if(!qs("actDate").value || !qs("actStart").value || !qs("actFinish").value){
+    alert("Please enter date, start time and finish time");
+    return;
+  }
+
+  const ics = buildICS({
+    title: "Acting Up Duty",
+    date: qs("actDate").value,
+    start: qs("actStart").value,
+    finish: qs("actFinish").value,
+    description: `Acting Up\nHours: ${qs("actHours").value}`
+  });
+
+  downloadICS("acting-up.ics", ics);
+}
 </script>
 
 </body>
