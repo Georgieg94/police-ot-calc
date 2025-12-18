@@ -7,26 +7,16 @@ content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
 <title>Police OT</title>
 
 <style>
-/* ================= ROOT ================= */
-:root{
---blue:#0a3a8f;
---bg:#f2f2f7;
---card:#ffffff;
---muted:#6b7280;
-}
-
-/* ================= RESET ================= */
+:root{--blue:#0a3a8f}
 *{box-sizing:border-box}
 body{
 margin:0;
 font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;
-background:var(--bg);
+background:#f2f2f7;
 padding-bottom:40px;
 }
-h1,h2,h3{text-align:center;margin:12px 0}
+h1,h2{text-align:center;margin:12px 0}
 label{font-size:.85rem;font-weight:600}
-
-/* ================= INPUTS ================= */
 input,select,button{
 width:100%;
 padding:10px;
@@ -36,32 +26,22 @@ border:1px solid #ccc;
 font-size:.9rem;
 text-align:left;
 }
-
-/* ================= CARDS ================= */
 .card{
 max-width:420px;
 margin:70px auto 24px;
-background:var(--card);
+background:#fff;
 border-radius:16px;
 padding:16px;
 box-shadow:0 8px 20px rgba(0,0,0,.08);
 }
 .field{margin-top:10px}
-
-/* ================= BUTTONS ================= */
 button.primary{
 background:var(--blue);
 color:#fff;
 border:none;
 font-weight:700;
 margin-top:12px;
-cursor:pointer;
 }
-button{
-cursor:pointer;
-}
-
-/* ================= RESULTS ================= */
 .result{
 background:#f5f5f7;
 border-radius:12px;
@@ -74,8 +54,6 @@ justify-content:space-between;
 margin:6px 0;
 font-size:.9rem;
 }
-
-/* ================= LOG ================= */
 .entry{
 background:#fff;
 border-radius:12px;
@@ -99,7 +77,7 @@ padding:6px;
 font-size:.8rem;
 }
 
-/* ================= MENU ================= */
+/* MENU */
 #menuBtn{
 position:fixed;
 top:12px;
@@ -134,7 +112,7 @@ margin:10px 0;
 font-weight:700;
 }
 
-/* ================= DISCLAIMER ================= */
+/* DISCLAIMER */
 #disclaimer{
 position:fixed;
 inset:0;
@@ -149,20 +127,22 @@ z-index:5000;
 
 <body>
 
-<!-- ================= DISCLAIMER ================= -->
+<!-- DISCLAIMER -->
 <div id="disclaimer">
-<div style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
-<h2>Disclaimer</h2>
-<p style="font-size:.9rem;line-height:1.45">
-Figures are guidance only and may be inaccurate following pay awards.
-This tool is not an official calculator.
-</p>
-<label style="display:flex;align-items:center;font-size:.85rem">
-<input type="checkbox" id="dontShowAgain" style="margin-right:8px">
-Don’t show again
-</label>
-<button class="primary" onclick="acceptDisclaimer()">I Understand</button>
-</div>
+  <div style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
+    <h2>Disclaimer</h2>
+    <p style="font-size:.9rem;line-height:1.45">
+      The figures used in this application are <b>not guaranteed to be 100% accurate</b>.<br><br>
+      They are intended to be as close as possible and may be outdated,
+      particularly following recent pay awards or changes.<br><br>
+      This app is for guidance only and must not be relied upon as an official calculation.
+    </p>
+    <label style="display:flex;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="dontShowAgain" style="margin-right:8px">
+      Don’t show again
+    </label>
+    <button class="primary" onclick="acceptDisclaimer()">I Understand</button>
+  </div>
 </div>
 
 <button id="menuBtn">☰</button>
@@ -238,9 +218,15 @@ Don’t show again
 <label>Expense</label>
 <select id="expense">
 <option value="0">None</option>
-<option value="7.5">£7.50 Meal</option>
-<option value="15">£15.00 Meal</option>
+<option value="7.5">Breakfast £7.50</option>
+<option value="7.5">Lunch £7.50</option>
+<option value="15">Dinner £15.00</option>
 </select>
+</div>
+
+<div class="field">
+<label>Receipt</label>
+<input type="file" id="receipt" accept="image/*">
 </div>
 
 <div class="result">
@@ -261,6 +247,14 @@ Don’t show again
 <h2>Acting Up Allowance</h2>
 
 <div class="field">
+<label>Force</label>
+<select id="actForce">
+<option value="met">Metropolitan Police</option>
+<option value="other">Other Home Office Force</option>
+</select>
+</div>
+
+<div class="field">
 <label>Current Rank</label>
 <select id="curRank">
 <option value="PC">PC</option>
@@ -276,7 +270,7 @@ Don’t show again
 <div class="field">
 <label>Acting Rank</label>
 <select id="actRank">
-<option value="PS">Sergeant</option>
+<option value="PS">Police Sergeant</option>
 <option value="INSP">Inspector</option>
 </select>
 </div>
@@ -287,12 +281,12 @@ Don’t show again
 </div>
 
 <div class="field">
-<label>Start</label>
+<label>Start Time</label>
 <input type="time" id="actStart">
 </div>
 
 <div class="field">
-<label>Finish</label>
+<label>Finish Time</label>
 <input type="time" id="actFinish">
 </div>
 
@@ -302,6 +296,9 @@ Don’t show again
 </div>
 
 <div class="result">
+<div class="row"><span>Hourly Difference</span><strong>£<span id="diff">0.00</span></strong></div>
+<div class="row"><span>Gross</span><strong>£<span id="actGross">0.00</span></strong></div>
+<div class="row"><span>Tax & NI</span><strong>£<span id="actTax">0.00</span></strong></div>
 <div class="row"><span>Total</span><strong>£<span id="actTotal">0.00</span></strong></div>
 </div>
 
@@ -317,11 +314,11 @@ Don’t show again
 
 <script>
 /* ================= CONFIG ================= */
-const APP_VERSION="1.0.1";
+const APP_VERSION="1.0.0";
 const LONDON=9738;
 const STORE="policeOT";
 
-/* ================= PAY ================= */
+/* PAY SCALES */
 const PAY={
 PC:[31646,32472,33789,35106,37737,43038,50256],
 PS:[43698,45409,47172],
@@ -330,14 +327,21 @@ INSP:[63768,65505,67236,68982]
 
 const qs=i=>document.getElementById(i);
 
-/* ================= DISCLAIMER ================= */
+/* DISCLAIMER */
 function acceptDisclaimer(){
-localStorage.setItem("disclaimerAccepted","1");
+localStorage.setItem("disclaimerAccepted",JSON.stringify({
+version:APP_VERSION,
+dontShow:qs("dontShowAgain").checked
+}));
 qs("disclaimer").style.display="none";
 }
-if(localStorage.getItem("disclaimerAccepted"))qs("disclaimer").style.display="none";
+(function(){
+const d=JSON.parse(localStorage.getItem("disclaimerAccepted")||"null");
+if(d&&d.version===APP_VERSION&&d.dontShow)
+qs("disclaimer").style.display="none";
+})();
 
-/* ================= TIME ================= */
+/* TIME */
 function round15(m){return Math.round(m/15)*15}
 function hoursBetween(s,f){
 if(!s||!f)return"";
@@ -348,10 +352,11 @@ if(m<0)m+=1440;
 return(round15(m)/60).toFixed(2);
 }
 
-/* ================= OT ================= */
+/* OVERTIME */
 function loadOTPoints(){
 qs("otPoint").innerHTML="";
 PAY[qs("otRank").value].forEach((_,i)=>qs("otPoint").add(new Option(i+1,i)));
+calcOT();
 }
 qs("otRank").onchange=loadOTPoints;
 loadOTPoints();
@@ -372,88 +377,119 @@ qs("total").textContent=(gross-tax).toFixed(2);
 }
 ["otStart","otFinish","otRate","otPoint","force"].forEach(i=>qs(i).onchange=calcOT);
 
-/* ================= STORAGE ================= */
+/* ACTING */
+function loadActPoints(){
+qs("curPoint").innerHTML="";
+PAY[qs("curRank").value].forEach((_,i)=>qs("curPoint").add(new Option(i+1,i)));
+calcActing();
+}
+qs("curRank").onchange=loadActPoints;
+loadActPoints();
+
+function calcActing(){
+qs("actHours").value=hoursBetween(qs("actStart").value,qs("actFinish").value);
+if(!qs("actHours").value)return;
+let cur=PAY[qs("curRank").value][qs("curPoint").value]+(qs("actForce").value==="met"?LONDON:0);
+let act=qs("actRank").value==="PS"?PAY.PS[0]:PAY.INSP[0];
+act+=(qs("actForce").value==="met"?LONDON:0);
+let diff=(act/52/40)-(cur/52/40);
+let gross=diff*qs("actHours").value;
+let tax=gross*(cur>50270?0.42:0.28);
+qs("diff").textContent=diff.toFixed(2);
+qs("actGross").textContent=gross.toFixed(2);
+qs("actTax").textContent=tax.toFixed(2);
+qs("actTotal").textContent=(gross-tax).toFixed(2);
+}
+["actStart","actFinish","curPoint","actRank","actForce"].forEach(i=>qs(i).onchange=calcActing);
+
+/* LOG */
 function load(){return JSON.parse(localStorage.getItem(STORE)||"[]")}
 function save(d){localStorage.setItem(STORE,JSON.stringify(d))}
 
-/* ================= SAVE ================= */
+let editingIndex=null;
+
 function saveOT(){
 calcOT();
+let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
 let d=load();
-d.push({
-type:"Overtime",
-date:qs("otDate").value,
-hours:qs("otHours").value,
-total:qs("total").textContent
-});
-save(d);
-renderLog();
-show("log");
+d.push({type:"Overtime",date:qs("otDate").value,hours:qs("otHours").value,expense:qs("expense").value,receipt:img});
+save(d);renderLog();show("log");
 }
 
-/* ================= EXPORT PDF ================= */
-function exportOTPDF(){
-let w=window.open("","print");
-w.document.write(`<pre>
-POLICE OVERTIME CLAIM
-
-Date: ${qs("otDate").value}
-Warrant: ${qs("warrant").value}
-Hours: ${qs("otHours").value}
-Total: £${qs("total").textContent}
-
-Generated by Police OT App
-</pre>`);
-w.print();
+function saveActing(){
+calcActing();
+let d=load();
+d.push({type:"Acting Up",date:qs("actDate").value,hours:qs("actHours").value});
+save(d);renderLog();show("log");
 }
 
-/* ================= EXPORT CALENDAR ================= */
-function exportOTCalendar(){
-let date=qs("otDate").value.replace(/-/g,"");
-let ics=`BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-SUMMARY:Police Overtime
-DTSTART:${date}T${qs("otStart").value.replace(":","")}00
-DTEND:${date}T${qs("otFinish").value.replace(":","")}00
-END:VEVENT
-END:VCALENDAR`;
-download("overtime.ics",ics);
-}
-function exportActingCalendar(){
-let date=qs("actDate").value.replace(/-/g,"");
-let ics=`BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-SUMMARY:Acting Up Duty
-DTSTART:${date}T${qs("actStart").value.replace(":","")}00
-DTEND:${date}T${qs("actFinish").value.replace(":","")}00
-END:VEVENT
-END:VCALENDAR`;
-download("acting.ics",ics);
-}
-function download(name,text){
-let a=document.createElement("a");
-a.href=URL.createObjectURL(new Blob([text],{type:"text/calendar"}));
-a.download=name;
-a.click();
-}
-
-/* ================= LOG ================= */
 function renderLog(){
 qs("log").innerHTML="";
-load().forEach(e=>{
+load().forEach((e,i)=>{
+if(editingIndex===i){
 qs("log").innerHTML+=`
 <div class="entry">
-<b>${e.type}</b><br>
-${e.date}<br>
-${e.hours} hrs<br>
-£${e.total}
+<label>Date</label>
+<input type="date" id="editDate" value="${e.date}">
+<label>Hours</label>
+<input id="editHours" value="${e.hours}">
+${e.expense!==undefined?`
+<label>Expense</label>
+<input id="editExpense" value="${e.expense}">
+`:""}
+<div class="entry-actions">
+<button onclick="saveEdit(${i})">Save</button>
+<button onclick="cancelEdit()">Cancel</button>
+</div>
 </div>`;
+}else{
+qs("log").innerHTML+=`
+<div class="entry">
+<b>${e.type}</b><br>${e.date}<br>${e.hours} hrs
+${e.expense?`<br>Expense £${e.expense}`:""}
+${e.receipt?`<img src="${e.receipt}">`:""}
+<div class="entry-actions">
+<button onclick="editEntry(${i})">Edit</button>
+<button onclick="del(${i})">Delete</button>
+</div>
+</div>`;
+}
 });
 }
 
-/* ================= NAV ================= */
+function editEntry(i){
+editingIndex=i;
+renderLog();
+}
+function cancelEdit(){
+editingIndex=null;
+renderLog();
+}
+function saveEdit(i){
+let d=load();
+d[i].date=qs("editDate").value;
+d[i].hours=qs("editHours").value;
+if(d[i].expense!==undefined){
+d[i].expense=qs("editExpense").value;
+}
+save(d);
+editingIndex=null;
+renderLog();
+}
+
+function del(i){
+let d=load();
+d.splice(i,1);
+save(d);
+renderLog();
+}
+function clearAll(){
+localStorage.clear();
+renderLog();
+alert("All data cleared");
+}
+
+/* NAV */
 function show(s){
 ["ot","acting","log"].forEach(x=>qs("screen-"+x).style.display="none");
 qs("screen-"+s).style.display="block";
