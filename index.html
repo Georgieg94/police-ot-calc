@@ -224,47 +224,33 @@ select:focus{
 }
 /* ================= FIXED PAGE HEADERS ================= */
 
-/* Page titles act as sticky headers */
+/* Page titles act as sticky app-style headers */
 .card h2{
   position:sticky;
   top:0;
   margin:-16px -16px 12px -16px;
-  padding:14px 16px;
+  padding:14px 64px 14px 16px; /* space on right for hamburger */
   background:var(--blue);
   color:#fff;
   font-size:1.1rem;
   z-index:1500;
   border-radius:16px 16px 0 0;
+  display:flex;
+  align-items:center;
 }
 
-/* Prevent content hiding under header */
-.card{
-  padding-top:0;
-}
-
-/* Ensure menu button stays above headers */
+/* Hamburger visually docked to title bar */
 #menuBtn{
-  z-index:2001;
-}
-/* ================= HEADER + HAMBURGER ALIGN FIX ================= */
-
-/* Make page headers act like a fixed app bar */
-.card h2{
-  position:sticky;
-  top:0;
-  padding-right:64px; /* space for hamburger */
-}
-
-/* Dock hamburger visually into the title bar */
-#menuBtn{
-  top:8px;
-  right:12px;
+  position:fixed;
+  top:14px;              /* aligns vertically with h2 */
+  right:16px;
   height:36px;
   width:36px;
   border-radius:10px;
   display:flex;
   align-items:center;
   justify-content:center;
+  z-index:2001;
 }
 </style>
 </head>
