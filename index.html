@@ -6,6 +6,9 @@
 content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Police OT</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+crossorigin="anonymous"></script>
+
 <style>
 :root{--blue:#0a3a8f}
 *{box-sizing:border-box}
@@ -111,46 +114,16 @@ border-radius:10px;
 margin:10px 0;
 font-weight:700;
 }
-
-/* DISCLAIMER */
-#disclaimer{
-position:fixed;
-inset:0;
-background:rgba(0,0,0,.6);
-display:flex;
-align-items:center;
-justify-content:center;
-z-index:5000;
-}
 </style>
 </head>
 
 <body>
-
-<!-- DISCLAIMER -->
-<div id="disclaimer">
-  <div style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
-    <h2>Disclaimer</h2>
-    <p style="font-size:.9rem;line-height:1.45">
-      The figures used in this application are <b>not guaranteed to be 100% accurate</b>.<br><br>
-      They are intended to be as close as possible and may be outdated,
-      particularly following recent pay awards or changes.<br><br>
-      This app is for guidance only and must not be relied upon as an official calculation.
-    </p>
-    <label style="display:flex;align-items:center;font-size:.85rem">
-      <input type="checkbox" id="dontShowAgain" style="margin-right:8px">
-      Don’t show again
-    </label>
-    <button class="primary" onclick="acceptDisclaimer()">I Understand</button>
-  </div>
-</div>
 
 <button id="menuBtn">☰</button>
 
 <div id="sideMenu">
 <h3>Menu</h3>
 <button onclick="show('ot')">Police Overtime</button>
-<button onclick="show('acting')">Acting Up</button>
 <button onclick="show('log')">Log</button>
 <button onclick="clearAll()">Clear All Data</button>
 </div>
@@ -162,8 +135,8 @@ z-index:5000;
 <div class="field">
 <label>Force</label>
 <select id="force">
-<option value="met">Metropolitan Police</option>
-<option value="other">Other Home Office Force</option>
+<option value="Metropolitan Police">Metropolitan Police</option>
+<option value="Other Home Office Force">Other Home Office Force</option>
 </select>
 </div>
 
@@ -173,54 +146,32 @@ z-index:5000;
 </div>
 
 <div class="field">
-<label>Rank</label>
-<select id="otRank">
-<option value="PC">PC</option>
-<option value="PS">PS</option>
-</select>
-</div>
-
-<div class="field">
-<label>Pay Point</label>
-<select id="otPoint"></select>
-</div>
-
-<div class="field">
 <label>Date</label>
-<input type="date" id="otDate">
+<input type="date" id="date">
 </div>
 
 <div class="field">
 <label>Start Time</label>
-<input type="time" id="otStart">
+<input type="time" id="start">
 </div>
 
 <div class="field">
 <label>Finish Time</label>
-<input type="time" id="otFinish">
+<input type="time" id="finish">
 </div>
 
 <div class="field">
 <label>Total Hours</label>
-<input id="otHours" readonly>
-</div>
-
-<div class="field">
-<label>OT Rate</label>
-<select id="otRate">
-<option value="1.3333">Standard (1⅓)</option>
-<option value="1.5">Rest Day (1½)</option>
-<option value="2">Cancelled RD (Double)</option>
-</select>
+<input id="hours" readonly>
 </div>
 
 <div class="field">
 <label>Expense</label>
 <select id="expense">
 <option value="0">None</option>
-<option value="7.5">Breakfast £7.50</option>
-<option value="7.5">Lunch £7.50</option>
-<option value="15">Dinner £15.00</option>
+<option value="7.50">Breakfast £7.50</option>
+<option value="7.50">Lunch £7.50</option>
+<option value="15.00">Dinner £15.00</option>
 </select>
 </div>
 
@@ -229,78 +180,7 @@ z-index:5000;
 <input type="file" id="receipt" accept="image/*">
 </div>
 
-<div class="result">
-<div class="row"><span>Base Hourly</span><strong>£<span id="base">0.00</span></strong></div>
-<div class="row"><span>OT Hourly</span><strong>£<span id="ot">0.00</span></strong></div>
-<div class="row"><span>Gross</span><strong>£<span id="gross">0.00</span></strong></div>
-<div class="row"><span>Tax & NI</span><strong>£<span id="tax">0.00</span></strong></div>
-<div class="row"><span>Total</span><strong>£<span id="total">0.00</span></strong></div>
-</div>
-
 <button class="primary" onclick="saveOT()">Save Overtime</button>
-</div>
-
-<!-- ================= ACTING UP ================= -->
-<div class="card" id="screen-acting" style="display:none">
-<h2>Acting Up Allowance</h2>
-
-<div class="field">
-<label>Force</label>
-<select id="actForce">
-<option value="met">Metropolitan Police</option>
-<option value="other">Other Home Office Force</option>
-</select>
-</div>
-
-<div class="field">
-<label>Current Rank</label>
-<select id="curRank">
-<option value="PC">PC</option>
-<option value="PS">PS</option>
-</select>
-</div>
-
-<div class="field">
-<label>Current Pay Point</label>
-<select id="curPoint"></select>
-</div>
-
-<div class="field">
-<label>Acting Rank</label>
-<select id="actRank">
-<option value="PS">Police Sergeant</option>
-<option value="INSP">Inspector</option>
-</select>
-</div>
-
-<div class="field">
-<label>Date</label>
-<input type="date" id="actDate">
-</div>
-
-<div class="field">
-<label>Start Time</label>
-<input type="time" id="actStart">
-</div>
-
-<div class="field">
-<label>Finish Time</label>
-<input type="time" id="actFinish">
-</div>
-
-<div class="field">
-<label>Total Hours</label>
-<input id="actHours" readonly>
-</div>
-
-<div class="result">
-<div class="row"><span>Hourly Difference</span><strong>£<span id="diff">0.00</span></strong></div>
-<div class="row"><span>Gross</span><strong>£<span id="actGross">0.00</span></strong></div>
-<div class="row"><span>Tax & NI</span><strong>£<span id="actTax">0.00</span></strong></div>
-<div class="row"><span>Total</span><strong>£<span id="actTotal">0.00</span></strong></div>
-</div>
-
-<button class="primary" onclick="saveActing()">Save Acting Up</button>
 </div>
 
 <!-- ================= LOG ================= -->
@@ -310,146 +190,100 @@ z-index:5000;
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const APP_VERSION="1.0.0";
-const LONDON=9738;
-const STORE="policeOT";
-
-/* PAY SCALES */
-const PAY={
-PC:[31646,32472,33789,35106,37737,43038,50256],
-PS:[43698,45409,47172],
-INSP:[63768,65505,67236,68982]
-};
-
+const STORE='policeOT';
 const qs=i=>document.getElementById(i);
 
-/* DISCLAIMER */
-function acceptDisclaimer(){
-localStorage.setItem("disclaimerAccepted",JSON.stringify({
-version:APP_VERSION,
-dontShow:qs("dontShowAgain").checked
-}));
-qs("disclaimer").style.display="none";
-}
-(function(){
-const d=JSON.parse(localStorage.getItem("disclaimerAccepted")||"null");
-if(d&&d.version===APP_VERSION&&d.dontShow)
-qs("disclaimer").style.display="none";
-})();
-
-/* TIME */
-function round15(m){return Math.round(m/15)*15}
 function hoursBetween(s,f){
-if(!s||!f)return"";
-let [sh,sm]=s.split(":").map(Number);
-let [fh,fm]=f.split(":").map(Number);
-let m=(fh*60+fm)-(sh*60+sm);
-if(m<0)m+=1440;
-return(round15(m)/60).toFixed(2);
+if(!s||!f)return'';
+let [sh,sm]=s.split(':').map(Number);
+let [fh,fm]=f.split(':').map(Number);
+let m=(fh*60+fm)-(sh*60+sm); if(m<0)m+=1440;
+return (Math.round(m/15)*15/60).toFixed(2);
 }
 
-/* OVERTIME */
-function loadOTPoints(){
-qs("otPoint").innerHTML="";
-PAY[qs("otRank").value].forEach((_,i)=>qs("otPoint").add(new Option(i+1,i)));
-calcOT();
-}
-qs("otRank").onchange=loadOTPoints;
-loadOTPoints();
+['start','finish'].forEach(i=>qs(i).onchange=()=>{
+qs('hours').value=hoursBetween(qs('start').value,qs('finish').value);
+});
 
-function calcOT(){
-qs("otHours").value=hoursBetween(qs("otStart").value,qs("otFinish").value);
-if(!qs("otHours").value)return;
-let annual=PAY[qs("otRank").value][qs("otPoint").value]+(qs("force").value==="met"?LONDON:0);
-let base=annual/52/40;
-let ot=base*qs("otRate").value;
-let gross=(ot-base)*qs("otHours").value;
-let tax=gross*(annual>50270?0.42:0.28);
-qs("base").textContent=base.toFixed(2);
-qs("ot").textContent=ot.toFixed(2);
-qs("gross").textContent=gross.toFixed(2);
-qs("tax").textContent=tax.toFixed(2);
-qs("total").textContent=(gross-tax).toFixed(2);
-}
-["otStart","otFinish","otRate","otPoint","force"].forEach(i=>qs(i).onchange=calcOT);
-
-/* ACTING */
-function loadActPoints(){
-qs("curPoint").innerHTML="";
-PAY[qs("curRank").value].forEach((_,i)=>qs("curPoint").add(new Option(i+1,i)));
-calcActing();
-}
-qs("curRank").onchange=loadActPoints;
-loadActPoints();
-
-function calcActing(){
-qs("actHours").value=hoursBetween(qs("actStart").value,qs("actFinish").value);
-if(!qs("actHours").value)return;
-let cur=PAY[qs("curRank").value][qs("curPoint").value]+(qs("actForce").value==="met"?LONDON:0);
-let act=qs("actRank").value==="PS"?PAY.PS[0]:PAY.INSP[0];
-act+=(qs("actForce").value==="met"?LONDON:0);
-let diff=(act/52/40)-(cur/52/40);
-let gross=diff*qs("actHours").value;
-let tax=gross*(cur>50270?0.42:0.28);
-qs("diff").textContent=diff.toFixed(2);
-qs("actGross").textContent=gross.toFixed(2);
-qs("actTax").textContent=tax.toFixed(2);
-qs("actTotal").textContent=(gross-tax).toFixed(2);
-}
-["actStart","actFinish","curPoint","actRank","actForce"].forEach(i=>qs(i).onchange=calcActing);
-
-/* LOG */
-function load(){return JSON.parse(localStorage.getItem(STORE)||"[]")}
+function load(){return JSON.parse(localStorage.getItem(STORE)||'[]')}
 function save(d){localStorage.setItem(STORE,JSON.stringify(d))}
 
 function saveOT(){
-calcOT();
-let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
-let d=load();
-d.push({type:"Overtime",date:qs("otDate").value,hours:qs("otHours").value,total:qs("total").textContent,expense:qs("expense").value,receipt:img});
-save(d);renderLog();show("log");
-}
-
-function saveActing(){
-calcActing();
-let d=load();
-d.push({type:"Acting Up",date:qs("actDate").value,hours:qs("actHours").value,total:qs("actTotal").textContent});
-save(d);renderLog();show("log");
+const img=qs('receipt').files[0]?URL.createObjectURL(qs('receipt').files[0]):null;
+const d=load();
+d.push({
+force:qs('force').value,
+warrant:qs('warrant').value,
+date:qs('date').value,
+start:qs('start').value,
+finish:qs('finish').value,
+hours:qs('hours').value,
+expense:qs('expense').value,
+receipt:img
+});
+save(d);renderLog();show('log');
 }
 
 function renderLog(){
-qs("log").innerHTML="";
+qs('log').innerHTML='';
 load().forEach((e,i)=>{
-qs("log").innerHTML+=`
+qs('log').innerHTML+=`
 <div class="entry">
-<b>${e.type}</b><br>${e.date}<br>${e.hours} hrs<br>Total £${e.total}
-${e.expense?`<br>Expense £${e.expense}`:""}
-${e.receipt?`<img src="${e.receipt}">`:""}
+<b>${e.force}</b><br>
+Warrant: ${e.warrant}<br>
+${e.date}<br>
+${e.start} - ${e.finish} (${e.hours} hrs)<br>
+Expense £${e.expense}
+${e.receipt?`<img src="${e.receipt}">`:''}
 <div class="entry-actions">
+<button onclick="exportPDF(${i})">Export PDF</button>
 <button onclick="del(${i})">Delete</button>
 </div>
 </div>`;
 });
 }
 
-function del(i){let d=load();d.splice(i,1);save(d);renderLog()}
-function clearAll(){
-localStorage.clear();
-renderLog();
-alert("All data cleared");
+function del(i){
+let d=load(); d.splice(i,1); save(d); renderLog();
 }
 
-/* NAV */
-function show(s){
-["ot","acting","log"].forEach(x=>qs("screen-"+x).style.display="none");
-qs("screen-"+s).style.display="block";
-qs("sideMenu").style.left="-260px";
+function clearAll(){
+localStorage.removeItem(STORE);
+renderLog();
 }
-qs("menuBtn").onclick=()=>{
-qs("sideMenu").style.left=qs("sideMenu").style.left==="0px"?"-260px":"0px";
+
+function exportPDF(i){
+const e=load()[i];
+const { jsPDF } = window.jspdf;
+const pdf=new jsPDF();
+
+pdf.setFontSize(14);
+pdf.text(e.force,20,20);
+
+pdf.setFontSize(10);
+pdf.text(`Warrant Number: ${e.warrant}`,20,35);
+pdf.text(`Date: ${e.date}`,20,45);
+pdf.text(`Start Time: ${e.start}`,20,55);
+pdf.text(`Finish Time: ${e.finish}`,20,65);
+pdf.text(`Hours: ${e.hours}`,20,75);
+pdf.text(`Expense: £${e.expense}`,20,85);
+
+if(e.receipt){
+pdf.addImage(e.receipt,'JPEG',20,95,60,60);
+}
+
+pdf.save(`Police_OT_Claim_${e.date}.pdf`);
+}
+
+function show(s){
+['ot','log'].forEach(x=>qs('screen-'+x).style.display='none');
+qs('screen-'+s).style.display='block';
+qs('sideMenu').style.left='-260px';
+}
+qs('menuBtn').onclick=()=>{
+qs('sideMenu').style.left=
+qs('sideMenu').style.left==='0px'?'-260px':'0px';
 };
 </script>
 </body>
 </html>
-
