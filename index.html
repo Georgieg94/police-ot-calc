@@ -694,6 +694,7 @@ const saveCal = d =>
 
 /* DISCLAIMER */
 function acceptDisclaimer(){
+  alert("Disclaimer accepted");
   localStorage.setItem("disclaimerAccepted", JSON.stringify({
     version: APP_VERSION,
     dontShow: qs("dontShowAgain").checked
@@ -701,11 +702,19 @@ function acceptDisclaimer(){
   qs("disclaimer").style.display = "none";
 }
 
-(function(){
-const d=JSON.parse(localStorage.getItem("disclaimerAccepted")||"null");
-if(d&&d.version===APP_VERSION&&d.dontShow)
-qs("disclaimer").style.display="none";
-})();
+document.addEventListener("DOMContentLoaded", () => {
+  const d = JSON.parse(localStorage.getItem("disclaimerAccepted") || "null");
+
+  if (
+    d &&
+    d.version === APP_VERSION &&
+    d.dontShow &&
+    qs("disclaimer")
+  ) {
+    qs("disclaimer").style.display = "none";
+  }
+});
+
 
 /* TIME */
 function round15(m){return Math.round(m/15)*15}
