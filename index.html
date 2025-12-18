@@ -409,7 +409,10 @@ if(!s||!f)return"";
 let [sh,sm]=s.split(":").map(Number);
 let [fh,fm]=f.split(":").map(Number);
 let m=(fh*60+fm)-(sh*60+sm);
-if(m<0)m+=1440;
+if(m<0){
+alert("Finish time cannot be before start time");
+return"";
+}
 return(round15(m)/60).toFixed(2);
 }
 
@@ -421,6 +424,8 @@ calcOT();
 }
 qs("otRank").onchange=loadOTPoints;
 loadOTPoints();
+qs("otDate").value=new Date().toISOString().split("T")[0];
+
 
 function calcOT(){
 qs("otHours").value=hoursBetween(qs("otStart").value,qs("otFinish").value);
@@ -471,6 +476,10 @@ let editingIndex=null;
 
 function saveOT(){
 calcOT();
+if(isNaN(Number(qs("expense").value))){
+alert("Invalid expense value");
+return;
+}
 let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
 let d=load();
 d.push({type:"Overtime",date:qs("otDate").value,hours:qs("otHours").value,expense:qs("expense").value,receipt:img});
