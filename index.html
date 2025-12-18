@@ -303,6 +303,7 @@ z-index:5000;
 </div>
 
 <button class="primary" onclick="saveActing()">Save Acting Up</button>
+<button onclick="exportActingCalendar()">Export to Calendar</button>
 </div>
 
 <!-- ================= LOG ================= -->
@@ -501,6 +502,34 @@ const blob=new Blob([ics],{type:"text/calendar"});
 const a=document.createElement("a");
 a.href=URL.createObjectURL(blob);
 a.download="overtime.ics";
+a.click();
+}
+
+/* ================= ACTING UP CALENDAR EXPORT ================= */
+function exportActingCalendar(){
+if(!qs("actDate").value||!qs("actStart").value||!qs("actFinish").value){
+alert("Please complete date and time fields.");
+return;
+}
+const date=qs("actDate").value.replace(/-/g,"");
+const start=qs("actStart").value.replace(":","")+"00";
+const finish=qs("actFinish").value.replace(":","")+"00";
+const ics=`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Police OT//EN
+BEGIN:VEVENT
+UID:${Date.now()}@policeot
+DTSTAMP:${date}T${start}
+DTSTART:${date}T${start}
+DTEND:${date}T${finish}
+SUMMARY:Acting Up Duty
+DESCRIPTION:Force ${qs("actForce").value==="met"?"Metropolitan Police":"Home Office Force"}\\nCurrent Rank ${qs("curRank").value}\\nActing Rank ${qs("actRank").value}\\nHours ${qs("actHours").value}
+END:VEVENT
+END:VCALENDAR`;
+const blob=new Blob([ics],{type:"text/calendar"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="acting-up.ics";
 a.click();
 }
 </script>
