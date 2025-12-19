@@ -6,12 +6,6 @@
 content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Police OT</title>
 
-<link
-  href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css"
-  rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-
-
 <style>
 :root{--blue:#0a3a8f}
 *{box-sizing:border-box}
@@ -122,7 +116,16 @@ margin:10px 0;
 font-weight:700;
 }
 
-
+/* DISCLAIMER */
+#disclaimer{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.6);
+display:flex;
+align-items:center;
+justify-content:center;
+z-index:5000;
+}
 
   /* ================= UNIFIED BUTTON STYLE ================= */
 
@@ -357,35 +360,28 @@ body.dark .remove-receipt{
 body.dark button.danger{
   background:#b91c1c !important;
 }
-body.dark .fc{
-  background:#111827;
-  color:#e5e7eb;
-}
-
-body.dark .fc-daygrid-day{
-  background:#020617;
-}
-
-body.dark .fc-toolbar-title{
-  color:#e5e7eb;
-}
-/* ================= CALENDAR SIZE ================= */
-
-#calendar{
-  margin-top:12px;
-  min-height:380px;
-}
-
-@media (max-width:480px){
-  #calendar{
-    min-height:340px;
-  }
-}
-  
 </style>
 </head>
   
 <body>
+
+<!-- DISCLAIMER -->
+<div id="disclaimer">
+  <div style="background:#fff;border-radius:16px;padding:20px;max-width:360px;width:90%">
+    <h2>Disclaimer</h2>
+    <p style="font-size:.9rem;line-height:1.45">
+      The figures used in this application are <b>not guaranteed to be 100% accurate</b>.<br><br>
+      They are intended to be as close as possible and may be outdated,
+      particularly following recent pay awards or changes.<br><br>
+      This app is for guidance only and must not be relied upon as an official calculation.
+    </p>
+    <label style="display:flex;align-items:center;font-size:.85rem">
+      <input type="checkbox" id="dontShowAgain" style="margin-right:8px">
+      Don’t show again
+    </label>
+    <button class="primary" onclick="acceptDisclaimer()">I Understand</button>
+  </div>
+</div>
 
 <button id="menuBtn">☰</button>
 
@@ -394,7 +390,6 @@ body.dark .fc-toolbar-title{
 <button onclick="show('ot')">Police Overtime</button>
 <button onclick="show('acting')">Acting Up</button>
 <button onclick="show('log')">Log</button>
-<button onclick="show('calendar')">Calendar</button>
 <button onclick="toggleDarkMode()">🌙 Dark Mode</button>
 <button class="danger" onclick="clearAll()">Clear All Data</button>
 </div>
@@ -491,7 +486,7 @@ body.dark .fc-toolbar-title{
   <div class="row"><span>Total</span><strong>£<span id="total">0.00</span></strong></div>
 </div>
 
-<button class="primary" onclick="saveOTStore()">Save Overtime</button>
+<button class="primary" onclick="saveOT()">Save Overtime</button>
 <button onclick="exportOTClaimPDF()">Export Claim (PDF)</button>
 <button onclick="exportOTCalendar()">Export to Calendar</button>
 </div> 
@@ -566,42 +561,13 @@ body.dark .fc-toolbar-title{
 <div id="log"></div>
 </div>
 
-<!-- ================= CALENDAR ================= -->
-<div class="card" id="screen-calendar" style="display:none">
-  <h2>Calendar</h2>
-
-  <div id="calendar"></div>
-
-  <div class="field">
-    <label>Add Entry</label>
-    <select id="calType">
-      <option value="Leave">Annual Leave</option>
-      <option value="Shift">Shift / Schedule</option>
-    </select>
-  </div>
-
-  <div class="field">
-    <input type="date" id="calDate">
-  </div>
-
-  <div class="field">
-    <input id="calNote" placeholder="Optional note">
-  </div>
-
-  <button onclick="addCalendarEntry()">Add to Calendar</button>
-</div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  
   
 <script>
 /* ================= CONFIG ================= */
-const APP_VERSION = "1.0.0";
-const STORE_OT  = "policeOT_overtime";
-const STORE_ACT = "policeOT_acting";
-const STORE_CAL = "policeOT_calendar";
-const LONDON = 9738;
-
-
+const APP_VERSION="1.0.0";
+const LONDON=9738;
+const STORE="policeOT";
 
 /* PAY SCALES */
 const PAY={
@@ -610,29 +576,21 @@ PS:[43698,45409,47172],
 INSP:[63768,65505,67236,68982]
 };
 
-const qs = i => document.getElementById(i);
+const qs=i=>document.getElementById(i);
 
-/* ================= STORE HELPERS ================= */
-
-const loadOTStore = () =>
-  JSON.parse(localStorage.getItem(STORE_OT) || "[]");
-
-const saveOTStore = d =>
-  localStorage.setItem(STORE_OT, JSON.stringify(d));
-
-const loadActStore = () =>
-  JSON.parse(localStorage.getItem(STORE_ACT) || "[]");
-
-const saveActStore = d =>
-  localStorage.setItem(STORE_ACT, JSON.stringify(d));
-
-
-const loadCal = () =>
-  JSON.parse(localStorage.getItem(STORE_CAL) || "[]");
-
-const saveCal = d =>
-  localStorage.setItem(STORE_CAL, JSON.stringify(d));
-
+/* DISCLAIMER */
+function acceptDisclaimer(){
+localStorage.setItem("disclaimerAccepted",JSON.stringify({
+version:APP_VERSION,
+dontShow:qs("dontShowAgain").checked
+}));
+qs("disclaimer").style.display="none";
+}
+(function(){
+const d=JSON.parse(localStorage.getItem("disclaimerAccepted")||"null");
+if(d&&d.version===APP_VERSION&&d.dontShow)
+qs("disclaimer").style.display="none";
+})();
 
 /* TIME */
 function round15(m){return Math.round(m/15)*15}
@@ -646,13 +604,13 @@ return(round15(m)/60).toFixed(2);
 }
 
 /* OVERTIME */
-function loadOTStorePoints(){
+function loadOTPoints(){
 qs("otPoint").innerHTML="";
 PAY[qs("otRank").value].forEach((_,i)=>qs("otPoint").add(new Option(i+1,i)));
 calcOT();
 }
-qs("otRank").onchange=loadOTStorePoints;
-loadOTStorePoints();
+qs("otRank").onchange=loadOTPoints;
+loadOTPoints();
 
 function calcOT(){
 qs("otHours").value=hoursBetween(qs("otStart").value,qs("otFinish").value);
@@ -671,13 +629,13 @@ qs("total").textContent=(gross-tax).toFixed(2);
 ["otStart","otFinish","otRate","otPoint","force"].forEach(i=>qs(i).onchange=calcOT);
 
 /* ACTING */
-function loadActStorePoints(){
+function loadActPoints(){
 qs("curPoint").innerHTML="";
 PAY[qs("curRank").value].forEach((_,i)=>qs("curPoint").add(new Option(i+1,i)));
 calcActing();
 }
-qs("curRank").onchange=loadActStorePoints;
-loadActStorePoints();
+qs("curRank").onchange=loadActPoints;
+loadActPoints();
 
 function calcActing(){
 qs("actHours").value=hoursBetween(qs("actStart").value,qs("actFinish").value);
@@ -696,51 +654,24 @@ qs("actTotal").textContent=(gross-tax).toFixed(2);
 ["actStart","actFinish","curPoint","actRank","actForce"].forEach(i=>qs(i).onchange=calcActing);
 
 /* LOG */
-function load(){
-  return [
-    ...loadOTStore(),
-    ...loadActStore(),
-    ...loadCal()
-  ];
-}
-
+function load(){return JSON.parse(localStorage.getItem(STORE)||"[]")}
+function save(d){localStorage.setItem(STORE,JSON.stringify(d))}
 
 let editingIndex=null;
 
-function saveOTStore(){
-  calcOT();
-
-  const img = qs("receipt").files[0]
-    ? URL.createObjectURL(qs("receipt").files[0])
-    : null;
-
-  const d = loadOTStore();
-  d.push({
-    type:"Overtime",
-    date:qs("otDate").value,
-    hours:qs("otHours").value,
-    expense:qs("expense").value,
-    receipt:img
-  });
-
-  saveOTStore(d);
-  renderLog();
-  show("log");
+function saveOT(){
+calcOT();
+let img=qs("receipt").files[0]?URL.createObjectURL(qs("receipt").files[0]):null;
+let d=load();
+d.push({type:"Overtime",date:qs("otDate").value,hours:qs("otHours").value,expense:qs("expense").value,receipt:img});
+save(d);renderLog();show("log");
 }
 
 function saveActing(){
-  calcActing();
-
-  const d = loadActStore();
-  d.push({
-    type:"Acting Up",
-    date:qs("actDate").value,
-    hours:qs("actHours").value
-  });
-
-  saveActStore(d);
-  renderLog();
-  show("log");
+calcActing();
+let d=load();
+d.push({type:"Acting Up",date:qs("actDate").value,hours:qs("actHours").value});
+save(d);renderLog();show("log");
 }
 
 function renderLog(){
@@ -786,40 +717,22 @@ editingIndex=null;
 renderLog();
 }
 function saveEdit(i){
-  const all = load();
-
-  all[i].date = qs("editDate").value;
-  all[i].hours = qs("editHours").value;
-
-  if(all[i].expense !== undefined){
-    all[i].expense = qs("editExpense").value;
-  }
-
-  const ot  = all.filter(e => e.type === "Overtime");
-  const act = all.filter(e => e.type === "Acting Up");
-  const cal = all.filter(e => !["Overtime","Acting Up"].includes(e.type));
-
-  saveOTStore(ot);
-  saveActStore(act);
-  saveCal(cal);
-
-  editingIndex = null;
-  renderLog();
+let d=load();
+d[i].date=qs("editDate").value;
+d[i].hours=qs("editHours").value;
+if(d[i].expense!==undefined){
+d[i].expense=qs("editExpense").value;
+}
+save(d);
+editingIndex=null;
+renderLog();
 }
 
 function del(i){
-  const all = load();
-  all.splice(i,1);
-
-  const ot  = all.filter(e => e.type === "Overtime");
-  const act = all.filter(e => e.type === "Acting Up");
-  const cal = all.filter(e => !["Overtime","Acting Up"].includes(e.type));
-
-  saveOTStore(ot);
-  saveActStore(act);
-  saveCal(cal);
-
-  renderLog();
+let d=load();
+d.splice(i,1);
+save(d);
+renderLog();
 }
 
 function clearAll(){
@@ -840,9 +753,7 @@ Do you want to continue?`;
   if(!confirm(msg)) return;
 
   /* ===== CLEAR STORED DATA ===== */
-localStorage.removeItem(STORE_OT);
-localStorage.removeItem(STORE_ACT);
-localStorage.removeItem(STORE_CAL);
+  localStorage.removeItem(STORE);
 
   /* ===== OVERTIME ===== */
   [
@@ -884,29 +795,18 @@ localStorage.removeItem(STORE_CAL);
   qs("log").innerHTML = "";
   editingIndex = null;
 
-  /* Rebuild pay point dropdowns */
-loadOTStorePoints();
-loadActStorePoints();
-
   alert("All data has been cleared.");
 }
 
 /* NAV */
 function show(s){
-  ["ot","acting","log","calendar"].forEach(x =>
-    qs("screen-"+x).style.display="none"
-  );
-
-  qs("screen-"+s).style.display="block";
-  qs("sideMenu").style.left="-260px";
-
-  if(s==="calendar") loadCalendar();
+["ot","acting","log"].forEach(x=>qs("screen-"+x).style.display="none");
+qs("screen-"+s).style.display="block";
+qs("sideMenu").style.left="-260px";
 }
-  qs("menuBtn").onclick = () => {
-  qs("sideMenu").style.left =
-    qs("sideMenu").style.left === "0px" ? "-260px" : "0px";
+qs("menuBtn").onclick=()=>{
+qs("sideMenu").style.left=qs("sideMenu").style.left==="0px"?"-260px":"0px";
 };
-
   
 /* ================= CALENDAR EXPORT ================= */
 
@@ -1068,13 +968,10 @@ function clearReceipt(){
   document.querySelector(".remove-receipt").style.display = "none";
 }
   
-const receiptInput = qs("receipt");
-if(receiptInput){
-  receiptInput.addEventListener("change", () => {
-    document.querySelector(".remove-receipt").style.display =
-      receiptInput.files.length ? "flex" : "none";
-  });
-}
+qs("receipt").addEventListener("change", () => {
+  document.querySelector(".remove-receipt").style.display =
+    qs("receipt").files.length ? "flex" : "none";
+});
   
 /* ================= DARK MODE ================= */
 
@@ -1088,85 +985,6 @@ function toggleDarkMode(){
   if(localStorage.getItem("darkMode") === "on"){
     document.body.classList.add("dark");
   }
-})();
-
-
-/* ================= CALENDAR ================= */
-
-let calendarInstance = null;
-
-function loadCalendar(){
-  const calendarEl = qs("calendar");
-
-  if(calendarInstance){
-    calendarInstance.destroy();
-  }
-
-  const events = load().map(e => ({
-    title:
-      e.type === "Overtime" ? `OT (${e.hours}h)` :
-      e.type === "Acting Up" ? `Acting (${e.hours}h)` :
-      e.note || e.type,
-    start: e.date,
-    allDay: true,
-    color:
-      e.type === "Overtime" ? "#2563eb" :
-      e.type === "Acting Up" ? "#16a34a" :
-      e.type === "Leave" ? "#ca8a04" :
-      "#6b7280"
-  }));
-
-  calendarInstance = new FullCalendar.Calendar(calendarEl,{
-    initialView:"dayGridMonth",
-    height:"auto",
-    firstDay:1,
-    events
-  });
-
-  calendarInstance.render();
-}
-
-function addCalendarEntry(){
-  if(!qs("calDate").value){
-    alert("Please select a date");
-    return;
-  }
-
-  const d = loadCal();
-  d.push({
-    type: qs("calType").value,
-    date: qs("calDate").value,
-    note: qs("calNote").value
-  });
-
-  saveCal(d);
-
-  qs("calDate").value = "";
-  qs("calNote").value = "";
-
-  loadCalendar();
-}
-
-  /* ================= STORAGE MIGRATION ================= */
-(function migrateOldStore(){
-  const old = JSON.parse(localStorage.getItem("policeOT") || "null");
-  if(!old) return;
-
-  const ot  = [];
-  const act = [];
-  const cal = [];
-
-  old.forEach(e => {
-    if(e.type === "Overtime") ot.push(e);
-    else if(e.type === "Acting Up") act.push(e);
-    else cal.push(e);
-  });
-
-  localStorage.setItem("policeOT_overtime", JSON.stringify(ot));
-  localStorage.setItem("policeOT_acting", JSON.stringify(act));
-  localStorage.setItem("policeOT_calendar", JSON.stringify(cal));
-
-  localStorage.removeItem("policeOT");
 })();
 </script>
 
